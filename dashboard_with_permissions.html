@@ -1275,6 +1275,32 @@ body {
 .tdp-subtable .st-status.in_progress { background:rgba(245,158,11,0.12); color:var(--c-orange); }
 .tdp-subtable .st-status.not_started { background:var(--c-surface-2); color:var(--c-text-3); }
 
+/* V2.5 — 任务目标/关键成果/变更记录 */
+.tdp-subtable .st-goal-input,
+.tdp-subtable .st-kr-input {
+  width:100%; padding:6px 8px; border:1px solid var(--c-border); border-radius:6px;
+  font-size:12px; font-family:inherit; background:var(--c-surface); color:var(--c-text);
+  box-sizing:border-box;
+}
+.tdp-subtable .st-goal-input:focus,
+.tdp-subtable .st-kr-input:focus {
+  outline:none; border-color:var(--c-primary); box-shadow:0 0 0 2px rgba(67,97,238,0.15);
+}
+.tdp-subtable .st-goal-input::placeholder,
+.tdp-subtable .st-kr-input::placeholder {
+  color:var(--c-text-3);
+}
+.tdp-subtable .st-change-select {
+  padding:6px 8px; border:1px solid var(--c-border); border-radius:6px;
+  font-size:12px; font-family:inherit; background:var(--c-surface); color:var(--c-text);
+  cursor:pointer;
+}
+.tdp-subtable .st-change-select.change-init { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+.tdp-subtable .st-change-select.change-add { background:#dcfce7; color:#166534; border-color:#86efac; }
+.tdp-subtable .st-change-select.change-mod { background:#fef9c3; color:#854d0e; border-color:#fde047; }
+.tdp-subtable .st-change-select.change-del { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+.change-tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; background:rgba(59,130,246,0.12); color:#3b82f6; }
+
 .tdp-empty {
   text-align:center; padding:40px; color:var(--c-text-3); font-size:13px;
 }
@@ -2205,6 +2231,9 @@ body {
                   <th>重点工作</th>
                   <th>子任务</th>
                   <th>责任人</th>
+                  <th>任务目标</th>
+                  <th>关键成果</th>
+                  <th>变更记录</th>
                   <th>进度</th>
                   <th>状态</th>
                   <th>截止日期</th>
@@ -2275,7 +2304,7 @@ body {
         <div style="overflow-x:auto;">
           <table class="pm-subtable">
             <thead>
-              <tr><th>重点工作</th><th>子任务</th><th>责任人</th><th>进度</th><th>状态</th><th>更新日期</th></tr>
+              <tr><th>重点工作</th><th>子任务</th><th>责任人</th><th>任务目标</th><th>关键成果</th><th>变更记录</th><th>进度</th><th>状态</th><th>更新日期</th></tr>
             </thead>
             <tbody id="l2-pm-sub-tbody"></tbody>
           </table>
@@ -4466,6 +4495,9 @@ function renderTaskDetail(taskId) {
           <tr>
             <th>子任务</th>
             <th style="width:90px;">责任人</th>
+            <th style="min-width:110px;">任务目标</th>
+            <th style="min-width:110px;">关键成果</th>
+            <th style="width:90px;">变更记录</th>
             <th style="width:200px;">进度</th>
             <th style="width:90px;">状态</th>
             <th style="width:110px;">截止日期</th>
@@ -4477,10 +4509,21 @@ function renderTaskDetail(taskId) {
             const color = getOwnerColor(s.owner);
             const initial = s.owner ? s.owner.charAt(0) : '?';
             const sBarColor = s.progress >= 100 ? 'var(--c-green)' : s.progress >= 50 ? 'var(--c-orange)' : 'var(--c-red)';
+            const changeClass = !s.change||s.change==='初始设定'?'change-init':s.change==='H2新增'?'change-add':s.change==='H2变更'?'change-mod':'change-del';
             return `
               <tr data-sub-idx="${idx}">
                 <td class="st-name">${s.name}</td>
                 <td><span class="st-owner" style="background:${color};">${initial}</span></td>
+                <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal||'')}" placeholder="目标" onchange="updateSubtaskField('${t.id}',${idx},'goal',this.value,'task')" onblur="updateSubtaskField('${t.id}',${idx},'goal',this.value,'task')"></td>
+                <td><input type="text" class="st-kr-input" value="${escapeHtml(s.kr||'')}" placeholder="成果" onchange="updateSubtaskField('${t.id}',${idx},'kr',this.value,'task')" onblur="updateSubtaskField('${t.id}',${idx},'kr',this.value,'task')"></td>
+                <td>
+                  <select class="st-change-select ${changeClass}" onchange="updateSubtaskField('${t.id}',${idx},'change',this.value,'task')">
+                    <option value="初始设定" ${(!s.change||s.change==='初始设定')?'selected':''}>初始设定</option>
+                    <option value="H2新增" ${s.change==='H2新增'?'selected':''}>H2新增</option>
+                    <option value="H2变更" ${s.change==='H2变更'?'selected':''}>H2变更</option>
+                    <option value="H2删除" ${s.change==='H2删除'?'selected':''}>H2删除</option>
+                  </select>
+                </td>
                 <td>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <input type="range" min="0" max="100" value="${s.progress}" class="st-slider"
@@ -4564,6 +4607,7 @@ function addSubtaskInline(taskId, pageType) {
   subs.push({
     name, owner: (ownerEl.value || '').trim() || '未分配',
     progress: 0, status: 'not_started',
+    goal: '', kr: '', change: '初始设定',
     due: dueEl.value || '', updated: new Date().toISOString().split('T')[0]
   });
   allSubtasks[taskId] = subs;
@@ -4585,9 +4629,18 @@ function editSubtaskInline(taskId, subIdx, pageType) {
   if (newOwner === null) return;
   const newDue = prompt('截止日期 (YYYY-MM-DD):', s.due || '');
   if (newDue === null) return;
+  const newGoal = prompt('任务目标:', s.goal || '');
+  if (newGoal === null) return;
+  const newKr = prompt('关键成果:', s.kr || '');
+  if (newKr === null) return;
+  const newChange = prompt('变更记录 (初始设定/H2新增/H2变更/H2删除):', s.change || '初始设定');
+  if (newChange === null) return;
   s.name = newName.trim() || s.name;
   s.owner = newOwner.trim() || s.owner;
   s.due = newDue.trim();
+  s.goal = newGoal.trim();
+  s.kr = newKr.trim();
+  s.change = newChange.trim() || '初始设定';
   s.updated = new Date().toISOString().split('T')[0];
   allSubtasks[taskId] = subs;
   saveSubtasks(allSubtasks, getCurrentSubtaskKey());
@@ -4596,6 +4649,21 @@ function editSubtaskInline(taskId, subIdx, pageType) {
   renderCockpitCards();
   renderPMTaskCards();
   showToast('子任务已更新', 'success');
+}
+
+// V2.5 — inline field update for goal/kr/change
+function updateSubtaskField(taskId, subIdx, field, value, pageType) {
+  const subs = getSubtasks(taskId);
+  if (!subs[subIdx]) return;
+  subs[subIdx][field] = value;
+  subs[subIdx].updated = new Date().toISOString().split('T')[0];
+  allSubtasks[taskId] = subs;
+  saveSubtasks(allSubtasks, getCurrentSubtaskKey());
+  // Re-render detail panel
+  if (pageType === 'task') renderTaskDetail(taskId);
+  else renderL2TaskDetail(taskId);
+  renderCockpitCards();
+  renderPMTaskCards();
 }
 
 // ========== BONUS PAGE ==========
@@ -4716,6 +4784,10 @@ function renderPMTrendChart() {
 }
 
 // --- Task progress summary cards ---
+function escapeHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function getOwnerColor(name) {
   const colors = ['#4361ee','#0ebaa0','#7c5cfc','#f59e0b','#e74c4c','#23b87e','#ec4899','#14b8a6'];
   let hash = 0;
@@ -4807,6 +4879,9 @@ function renderSubTaskTable() {
               <span>${s.owner}</span>
             </div>
           </td>
+          <td style="font-size:12px;color:var(--c-text-2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(s.goal||'')}">${s.goal || '—'}</td>
+          <td style="font-size:12px;color:var(--c-text-2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(s.kr||'')}">${s.kr || '—'}</td>
+          <td><span class="change-tag">${s.change || '初始设定'}</span></td>
           <td>
             <div class="sub-progress-cell">
               <div class="sub-mini-bar"><div class="sub-mini-fill" style="width:${s.progress}%;background:${barColors[s.status]};"></div></div>
@@ -4814,14 +4889,14 @@ function renderSubTaskTable() {
             </div>
           </td>
           <td><span class="status-tag ${s.status === 'completed' ? 'normal' : s.status === 'in_progress' ? 'warning' : 'info'}">${statusLabels[s.status]}</span></td>
-          <td style="color:var(--c-text-2);">${s.dueDate || '-'}</td>
-          <td style="color:var(--c-text-3);font-size:12px;">${s.updatedAt}</td>
+          <td style="color:var(--c-text-2);">${s.due || '-'}</td>
+          <td style="color:var(--c-text-3);font-size:12px;">${s.updated || '-'}</td>
         </tr>`);
     });
   });
 
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--c-text-3);">暂无子任务数据，请在重点工作页面点击任务卡片添加子任务</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--c-text-3);">暂无子任务数据，请在重点工作页面点击任务卡片添加子任务</td></tr>';
   } else {
     tbody.innerHTML = rows.join('');
   }
@@ -5225,6 +5300,9 @@ function renderL2TaskDetail(taskId) {
           <tr>
             <th>子任务</th>
             <th style="width:90px;">责任人</th>
+            <th style="min-width:110px;">任务目标</th>
+            <th style="min-width:110px;">关键成果</th>
+            <th style="width:90px;">变更记录</th>
             <th style="width:200px;">进度</th>
             <th style="width:90px;">状态</th>
             <th style="width:110px;">截止日期</th>
@@ -5236,10 +5314,21 @@ function renderL2TaskDetail(taskId) {
             const color = getOwnerColor(s.owner);
             const initial = s.owner ? s.owner.charAt(0) : '?';
             const sBarColor = s.progress >= 100 ? 'var(--c-green)' : s.progress >= 50 ? 'var(--c-orange)' : 'var(--c-red)';
+            const changeClass = !s.change||s.change==='初始设定'?'change-init':s.change==='H2新增'?'change-add':s.change==='H2变更'?'change-mod':'change-del';
             return `
               <tr data-sub-idx="${idx}">
                 <td class="st-name">${s.name}</td>
                 <td><span class="st-owner" style="background:${color};">${initial}</span></td>
+                <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal||'')}" placeholder="目标" onchange="updateSubtaskField('${t.id}',${idx},'goal',this.value,'l2')" onblur="updateSubtaskField('${t.id}',${idx},'goal',this.value,'l2')"></td>
+                <td><input type="text" class="st-kr-input" value="${escapeHtml(s.kr||'')}" placeholder="成果" onchange="updateSubtaskField('${t.id}',${idx},'kr',this.value,'l2')" onblur="updateSubtaskField('${t.id}',${idx},'kr',this.value,'l2')"></td>
+                <td>
+                  <select class="st-change-select ${changeClass}" onchange="updateSubtaskField('${t.id}',${idx},'change',this.value,'l2')">
+                    <option value="初始设定" ${(!s.change||s.change==='初始设定')?'selected':''}>初始设定</option>
+                    <option value="H2新增" ${s.change==='H2新增'?'selected':''}>H2新增</option>
+                    <option value="H2变更" ${s.change==='H2变更'?'selected':''}>H2变更</option>
+                    <option value="H2删除" ${s.change==='H2删除'?'selected':''}>H2删除</option>
+                  </select>
+                </td>
                 <td>
                   <div style="display:flex;align-items:center;gap:8px;">
                     <input type="range" min="0" max="100" value="${s.progress}" class="st-slider"
@@ -5379,12 +5468,12 @@ function renderL2SubTaskTable() {
   tasks.forEach(t => {
     const subs = getSubtasks(t.id);
     if (subs.length === 0) {
-      rows.push({title: t.title, name: '—', owner: '—', progress: 0, status: 'not_started', updatedAt: '—'});
+      rows.push({title: t.title, name: '—', owner: '—', goal: '—', kr: '—', change: '—', progress: 0, status: 'not_started', updatedAt: '—'});
     }
     subs.forEach(s => rows.push({title: t.title, ...s}));
   });
   if (rows.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--c-text-3);">暂无子任务数据</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--c-text-3);">暂无子任务数据</td></tr>';
     return;
   }
   const statusLabels = {completed: '已完成', in_progress: '进行中', not_started: '未开始'};
@@ -5394,6 +5483,9 @@ function renderL2SubTaskTable() {
       <td style="font-size:12px;">${r.title.substring(0, 20)}</td>
       <td style="font-size:12px;">${r.name}</td>
       <td style="font-size:12px;">${r.owner}</td>
+      <td style="font-size:11px;color:var(--c-text-2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.goal||'')}">${r.goal || '—'}</td>
+      <td style="font-size:11px;color:var(--c-text-2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(r.kr||'')}">${r.kr || '—'}</td>
+      <td style="font-size:11px;color:var(--c-text-2);">${r.change || '初始设定'}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px;">
           <div style="width:60px;height:6px;background:var(--c-surface-2);border-radius:3px;overflow:hidden;">
