@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二级部门全景视图 - 交互原型</title>
+<style>
+:root {
+  --primary: #4361ee;
+  --primary-light: #E6F1FB;
+  --teal: #0ebaa0;
+  --teal-light: #E1F5EE;
+  --purple: #7c5cfc;
+  --purple-light: #EEEDFE;
+  --amber: #f59e0b;
+  --amber-light: #FAEEDA;
+  --red: #e74c3c;
+  --red-light: #FCEBEB;
+  --green: #23b87e;
+  --green-light: #EAF3DE;
+  --gray-50: #F8F9FB;
+  --gray-100: #F1EFE8;
+  --gray-200: #E0E0E0;
+  --gray-300: #D3D1C7;
+  --gray-500: #888780;
+  --gray-700: #5F5E5A;
+  --gray-900: #2C2C2A;
+  --border: #E0E0E0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Top Bar */
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  background: var(--primary); color:#fff;
+  padding: 0 24px; height:56px;
+}
+.topbar h1 { font-size:17px; font-weight:600; }
+.topbar .topbar-right { display:flex; gap:12px; align-items:center; font-size:13px; opacity:0.9; }
+
+/* Toolbar */
+.toolbar {
+  display:flex; align-items:center; gap:12px;
+  background:#fff; padding:12px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.toolbar .label { font-size:13px; color:var(--gray-700); }
+.chip {
+  padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer;
+  border:1px solid var(--gray-200); background:#fff; color:var(--gray-700);
+  transition: all 0.15s;
+}
+.chip.active { background:var(--primary-light); border-color:#B5D4F4; color:#185FA5; font-weight:500; }
+.chip:hover { border-color:var(--gray-500); }
+.toolbar .spacer { flex:1; }
+.weight-badge {
+  padding:6px 12px; border-radius:6px; font-size:12px; font-weight:500;
+}
+.weight-badge.ok { background:var(--green-light); color:#3B6D11; }
+.weight-badge.warn { background:var(--amber-light); color:#854F0B; }
+
+/* Main Layout */
+.main {
+  display:flex; gap:0; height: calc(100vh - 56px - 49px);
+}
+.left-panel {
+  width: 340px; flex-shrink:0;
+  background:#fff; border-right: 1px solid var(--border);
+  overflow-y:auto;
+}
+.right-panel {
+  flex:1; overflow-y:auto; padding: 20px 24px;
+}
+
+/* Section Headers */
+.section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 10px 16px; background: var(--gray-100);
+  font-size:13px; font-weight:600; color:var(--gray-700);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top:0; z-index:1;
+}
+.section-header .weight { color: var(--primary); }
+
+/* KPI/Task Card in Left Panel */
+.item-card {
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.15s;
+  position: relative;
+}
+.item-card:hover { background: var(--gray-50); }
+.item-card.selected { background: var(--primary-light); border-left: 3px solid var(--primary); }
+.item-card .item-type {
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  margin-right:8px; vertical-align:middle;
+}
+.item-card .item-type.kpi { background: var(--primary); }
+.item-card .item-type.task { background: var(--purple); }
+.item-card .item-type.bonus { background: var(--amber); }
+.item-card .item-name { font-size:14px; font-weight:500; }
+.item-card .item-meta { font-size:12px; color:var(--gray-500); margin-top:4px; }
+.item-card .item-weight {
+  position:absolute; right:16px; top:50%; transform:translateY(-50%);
+  font-size:15px; font-weight:600; color: var(--primary);
+}
+.item-card .item-weight.task { color: var(--purple); }
+.item-card .acceptance-count {
+  display:inline-block; margin-left:8px;
+  font-size:11px; padding:2px 6px; border-radius:4px;
+  background: var(--teal-light); color: #0F6E56;
+}
+.item-card .acceptance-count.none { background: var(--red-light); color: #A32D2D; }
+
+/* Right Panel - Acceptance Detail */
+.detail-header {
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.detail-header h2 { font-size:18px; font-weight:600; }
+.detail-header .badge {
+  padding:4px 10px; border-radius:6px; font-size:12px; font-weight:500;
+}
+.badge.kpi { background: var(--primary-light); color: #185FA5; }
+.badge.task { background: var(--purple-light); color: #534AB7; }
+
+.info-grid {
+  display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;
+  margin-bottom:24px;
+}
+.info-card {
+  background:#fff; border:1px solid var(--border); border-radius:8px;
+  padding:14px 16px;
+}
+.info-card .ic-label { font-size:12px; color:var(--gray-500); margin-bottom:6px; }
+.info-card .ic-value { font-size:16px; font-weight:600; }
+.info-card .ic-value.primary { color: var(--primary); }
+.info-card .ic-value.green { color: var(--green); }
+.info-card .ic-value.red { color: var(--red); }
+
+/* Acceptance Table */
+.acceptance-section { margin-bottom:32px; }
+.acceptance-section h3 {
+  font-size:15px; font-weight:600; margin-bottom:12px;
+  display:flex; align-items:center; gap:8px;
+}
+.acceptance-table {
+  width:100%; border-collapse:collapse; background:#fff;
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+}
+.acceptance-table th {
+  background: var(--gray-100); padding:10px 14px;
+  font-size:12px; font-weight:600; color:var(--gray-700);
+  text-align:left; border-bottom: 1px solid var(--border);
+}
+.acceptance-table td {
+  padding:12px 14px; font-size:13px;
+  border-bottom: 1px solid var(--border);
+}
+.acceptance-table tr:last-child td { border-bottom: none; }
+.acceptance-table tr:hover { background: var(--gray-50); }
+
+.status-tag {
+  display:inline-block; padding:3px 8px; border-radius:4px;
+  font-size:11px; font-weight:500;
+}
+.status-tag.done { background: var(--green-light); color:#3B6D11; }
+.status-tag.progress { background: var(--amber-light); color:#854F0B; }
+.status-tag.pending { background: var(--red-light); color:#A32D2D; }
+
+.progress-bar {
+  display:inline-block; width:100px; height:8px;
+  background: var(--gray-100); border-radius:4px;
+  vertical-align: middle; margin-right:8px;
+  position: relative;
+}
+.progress-bar .fill {
+  height:100%; border-radius:4px;
+  transition: width 0.3s;
+}
+.progress-bar .fill.done { background: var(--teal); }
+.progress-bar .fill.progress { background: var(--amber); }
+.progress-bar .fill.pending { background: var(--gray-300); }
+
+/* Milestone Tree */
+.milestone-tree {
+  background:#fff; border:1px solid var(--border); border-radius:8px;
+  padding: 16px 20px;
+}
+.milestone-node {
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.milestone-node:last-child { border-bottom: none; }
+.milestone-node .ms-header {
+  display:flex; align-items:center; gap:8px; margin-bottom:8px;
+}
+.milestone-node .ms-tag {
+  padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;
+}
+.milestone-node .ms-tag.h1 { background: var(--primary-light); color:#185FA5; }
+.milestone-node .ms-tag.h2 { background: var(--purple-light); color:#534AB7; }
+.milestone-node .ms-name { font-size:13px; font-weight:500; }
+.milestone-node .ms-tasks { padding-left:56px; }
+.milestone-node .ms-tasks li {
+  font-size:12px; color:var(--gray-700); padding:3px 0;
+  list-style: none; position: relative; padding-left:14px;
+}
+.milestone-node .ms-tasks li::before {
+  content: ''; position:absolute; left:0; top:10px;
+  width:4px; height:4px; border-radius:50%; background:var(--gray-500);
+}
+
+/* Coverage Bar */
+.coverage-section {
+  margin-top:24px; padding:16px 20px;
+  background:#fff; border:1px solid var(--border); border-radius:8px;
+}
+.coverage-bar-wrap { display:flex; align-items:center; gap:12px; margin-top:8px; }
+.coverage-bar {
+  flex:1; height:14px; background:var(--gray-100); border-radius:7px;
+  position:relative; overflow:hidden;
+}
+.coverage-bar .fill {
+  height:100%; border-radius:7px; background:var(--teal);
+  transition: width 0.5s;
+}
+.coverage-bar .fill.partial { background: var(--amber); }
+.coverage-text { font-size:13px; color:var(--gray-700); white-space:nowrap; }
+.coverage-text .alert { color: var(--red); font-weight:500; }
+
+/* Action button */
+.btn-assign {
+  padding:4px 12px; border-radius:6px; font-size:12px;
+  background: var(--red-light); color: #A32D2D;
+  border: 1px solid #F09595; cursor:pointer;
+}
+.btn-assign:hover { background: #F5C4B3; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>集成维护开发部 - 二级部门全景视图</h1>
+  <div class="topbar-right">
+    <span>管理员: 夏国晋</span>
+    <span>|</span>
+    <span>2026年度</span>
+    <span>|</span>
+    <span>Q3</span>
+  </div>
+</div>
+
+<div class="toolbar">
+  <span class="label">筛选:</span>
+  <div class="chip active" onclick="filterType('all')">全部</div>
+  <div class="chip" onclick="filterType('kpi')">KPI指标</div>
+  <div class="chip" onclick="filterType('task')">重点工作</div>
+  <div class="chip" onclick="filterType('unassigned')">未承接</div>
+  <span style="width:20px;"></span>
+  <span class="label">三级部门:</span>
+  <div class="chip active">全部</div>
+  <div class="chip">升级交付组</div>
+  <div class="chip">质量保障组</div>
+  <div class="chip">维护交付组</div>
+  <div class="chip">架构能力组</div>
+  <div class="chip">工程能力组</div>
+  <div class="chip">生态合作组</div>
+  <div class="spacer"></div>
+  <span class="weight-badge ok">权重合计: 100% (校验通过)</span>
+</div>
+
+<div class="main">
+  <!-- Left Panel: 二级部门指标列表 -->
+  <div class="left-panel" id="leftPanel">
+    <div class="section-header">
+      <span>二级部门 KPI / 重点工作</span>
+      <span class="weight">权重</span>
+    </div>
+    <div id="itemList"></div>
+  </div>
+
+  <!-- Right Panel: 承接详情 -->
+  <div class="right-panel" id="rightPanel"></div>
+</div>
+
+<script>
+// ============================================================
+// 模拟数据 (基于提取的原始看板KPI数据)
+// ============================================================
+const data = [
+  {
+    id: 'k1', type: 'kpi', name: '大版本节点达成率', category: '软件交付质量',
+    weight: 0.10, unit: '%', provider: '研发质量部', lastYear: '98.44%',
+    target: '80%', threshold: '75%', challenge: '85%',
+    desc: '大版本节点达成率 >80%。节点: IPD流程中的STR评审点',
+    acceptance: [
+      { dept: '升级交付组', target: '82%', progress: 100, status: 'done' },
+      { dept: '质量保障组', target: '78%', progress: 72, status: 'progress' },
+    ]
+  },
+  {
+    id: 'k2', type: 'kpi', name: '集成维护承接节点达成率', category: '软件交付质量',
+    weight: 0.10, unit: '%', provider: '研发质量部', lastYear: '98.90%',
+    target: '90%', threshold: '85%', challenge: '95%',
+    desc: '节点达成率 ≥90%。节点: IPD流程和tOS流程中的STR评审点',
+    acceptance: [
+      { dept: '维护交付组', target: '92%', progress: 95, status: 'done' },
+      { dept: '版本管理组', target: '88%', progress: 0, status: 'pending' },
+    ]
+  },
+  {
+    id: 'k3', type: 'kpi', name: 'ARR保障（转维产品质量）', category: '软件交付质量',
+    weight: 0.05, unit: '%', provider: '质量管理部', lastYear: '低端88%/中高端66%',
+    target: '低端95%/中高端90%', threshold: '低端90%/中高端85%', challenge: '低端98%/中高端95%',
+    desc: '保障转维产品质量，降低ARR',
+    acceptance: [
+      { dept: '质量保障组', target: '低端96%', progress: 88, status: 'progress' },
+    ]
+  },
+  {
+    id: 'k4', type: 'kpi', name: '升级项目降本增效', category: '升级项目降本增效',
+    weight: 0.15, unit: '%', provider: '项目管理部', lastYear: '降低20%',
+    target: '15%', threshold: '12%', challenge: '20%',
+    desc: '直板机大版本升级单项目平均研发费用降低15% (240W->204W)',
+    acceptance: [] // 未承接
+  },
+  {
+    id: 'k5', type: 'kpi', name: '三方生态合作', category: '三方生态合作',
+    weight: 0.15, unit: '个', provider: '三方专项', lastYear: '17个',
+    target: '20个', threshold: '18个', challenge: '22个',
+    desc: '2026年三方生态合作(接入tOS能力栈)App数量 >=20个',
+    acceptance: [
+      { dept: '生态合作组', target: '21个', progress: 100, status: 'done' },
+    ]
+  },
+  {
+    id: 't1', type: 'task', name: '大版本升级能力建设', category: '大版本升级能力建设',
+    weight: 0.10, desc: '构建中高端项目"升三维五"升级能力，打造tOS"常用常新"用户体验',
+    milestones: [
+      { type: 'H1', name: '完成升维项目分支收编策略迭代', tasks: ['分支收编策略制定', '基线patch更新', '评审通过'] },
+      { type: 'H1', name: '完成升级工程能力规划', tasks: ['e化平台与SCMP整合', '自动化方案设计'] },
+      { type: 'H1', name: '建立新项目升级准入评估机制', tasks: ['评估标准制定', '流程发布'] },
+      { type: 'H2', name: '支撑榫卯5.0软件分层子项落地', tasks: ['分层方案评审', '开发对接'] },
+      { type: 'H2', name: '健全升级项目交付风险管控能力', tasks: ['风险模型建设', '预警机制上线'] },
+    ],
+    acceptance: [
+      { dept: '架构能力组', target: 'H1全部完成', progress: 60, status: 'progress', milestones: [
+        { type: 'H1', progress: 80, status: 'progress' },
+        { type: 'H2', progress: 0, status: 'pending' },
+      ]},
+      { dept: '工程能力组', target: 'H1部分完成', progress: 45, status: 'progress', milestones: [
+        { type: 'H1', progress: 55, status: 'progress' },
+        { type: 'H2', progress: 0, status: 'pending' },
+      ]},
+    ]
+  },
+  {
+    id: 't2', type: 'task', name: '降本增效', category: '升级项目降本增效',
+    weight: 0.10, desc: '压强AI能力建设，提升软件适配与故障分析效率，优化升级项目标准工期',
+    milestones: [
+      { type: 'H1', name: '完成26年升级项目降本增效专题立项', tasks: ['专题立项报告', '资源分配方案'] },
+      { type: 'H1', name: '完成tOS转维流程优化', tasks: ['流程梳理', '优化方案', '评审发布'] },
+      { type: 'H2', name: '完成WBS&人力模型V5.2', tasks: ['模型制定', '评审发布'] },
+      { type: 'H2', name: 'AI自动化分析工具优化', tasks: ['准确率>=60%', '渗透率>=80%'] },
+    ],
+    acceptance: [
+      { dept: '架构能力组', target: 'H1完成', progress: 80, status: 'progress' },
+      { dept: '工程能力组', target: 'H1进行中', progress: 55, status: 'progress' },
+    ]
+  },
+  {
+    id: 't3', type: 'task', name: '三方体验提升', category: '三方生态合作',
+    weight: 0.15, desc: '聚焦站点国家三方体验提升，完成体验模型、生态合作开放能力建设',
+    milestones: [
+      { type: 'H1', name: 'tOS16.x: 启动三方合作App>=10个', tasks: ['共识名单输出', '合作洽谈'] },
+      { type: 'H2', name: 'tOS17.x: 三方合作App>=20个', tasks: ['规模化落地', '体验攻坚'] },
+    ],
+    acceptance: [
+      { dept: '生态合作组', target: 'H1完成', progress: 100, status: 'done' },
+    ]
+  },
+  {
+    id: 't4', type: 'task', name: '组织建设', category: '组织建设',
+    weight: 0.10, desc: '聚焦AI效能突破，构建全链路升级维护项目开发能力',
+    milestones: [
+      { type: 'H1', name: '人才盘点与年度规划', tasks: ['人才盘点', '招聘满足率>=90%'] },
+      { type: 'H1', name: '知识库框架搭建', tasks: ['AI知识库建设', '高潜培养策略'] },
+      { type: 'H2', name: 'TLDP四级组织碎片化率=0', tasks: ['组织优化', '雏鹰培养计划'] },
+    ],
+    acceptance: [
+      { dept: '维护交付组', target: 'H1完成', progress: 90, status: 'progress' },
+    ]
+  },
+];
+
+let selectedItem = null;
+let currentFilter = 'all';
+
+function getAcceptanceCount(item) {
+  return item.acceptance ? item.acceptance.length : 0;
+}
+
+function renderLeftPanel() {
+  const list = document.getElementById('itemList');
+  let items = data;
+  if (currentFilter === 'kpi') items = data.filter(d => d.type === 'kpi');
+  else if (currentFilter === 'task') items = data.filter(d => d.type === 'task');
+  else if (currentFilter === 'unassigned') items = data.filter(d => getAcceptanceCount(d) === 0);
+
+  list.innerHTML = items.map(item => {
+    const count = getAcceptanceCount(item);
+    const countClass = count === 0 ? 'none' : '';
+    const countText = count === 0 ? '未承接' : `${count}个三级部门`;
+    return `
+      <div class="item-card ${selectedItem?.id === item.id ? 'selected' : ''}"
+           onclick="selectItem('${item.id}')">
+        <span class="item-type ${item.type}"></span>
+        <span class="item-name">${item.name}</span>
+        <span class="acceptance-count ${countClass}">${countText}</span>
+        <div class="item-meta">${item.category}</div>
+        <div class="item-weight ${item.type === 'task' ? 'task' : ''}">${(item.weight*100).toFixed(0)}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectItem(id) {
+  selectedItem = data.find(d => d.id === id);
+  renderLeftPanel();
+  renderRightPanel();
+}
+
+function renderRightPanel() {
+  const panel = document.getElementById('rightPanel');
+  if (!selectedItem) {
+    panel.innerHTML = '<div style="text-align:center;color:var(--gray-500);padding:60px 0;">请从左侧选择一个KPI或重点工作查看承接详情</div>';
+    return;
+  }
+
+  const item = selectedItem;
+  const count = getAcceptanceCount(item);
+
+  let html = `
+    <div class="detail-header">
+      <h2>${item.name}</h2>
+      <span class="badge ${item.type}">${item.type === 'kpi' ? 'KPI 关键指标' : '重点工作'}</span>
+      ${count === 0 ? '<span class="badge" style="background:var(--red-light);color:#A32D2D;">未承接</span>' : ''}
+    </div>
+  `;
+
+  // Info Grid
+  if (item.type === 'kpi') {
+    html += `
+      <div class="info-grid">
+        <div class="info-card"><div class="ic-label">所属维度</div><div class="ic-value">${item.category}</div></div>
+        <div class="info-card"><div class="ic-label">权重</div><div class="ic-value primary">${(item.weight*100).toFixed(0)}%</div></div>
+        <div class="info-card"><div class="ic-label">目标值</div><div class="ic-value">${item.target}</div></div>
+        <div class="info-card"><div class="ic-label">上周期完成</div><div class="ic-value">${item.lastYear}</div></div>
+        <div class="info-card"><div class="ic-label">门槛值 (60分)</div><div class="ic-value">${item.threshold}</div></div>
+        <div class="info-card"><div class="ic-label">目标值 (100分)</div><div class="ic-value primary">${item.target}</div></div>
+        <div class="info-card"><div class="ic-label">挑战值 (140分)</div><div class="ic-value green">${item.challenge}</div></div>
+        <div class="info-card"><div class="ic-label">数据来源</div><div class="ic-value">${item.provider}</div></div>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="info-grid">
+        <div class="info-card"><div class="ic-label">所属维度</div><div class="ic-value">${item.category}</div></div>
+        <div class="info-card"><div class="ic-label">权重</div><div class="ic-value primary">${(item.weight*100).toFixed(0)}%</div></div>
+        <div class="info-card"><div class="ic-label">里程碑数</div><div class="ic-value">${item.milestones?.length || 0}</div></div>
+        <div class="info-card"><div class="ic-label">承接三级部门</div><div class="ic-value ${count===0?'red':''}">${count}</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:24px;">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">任务描述</div>
+        <div style="font-size:13px;line-height:1.8;">${item.desc}</div>
+      </div>
+    `;
+  }
+
+  // Acceptance Table
+  html += `
+    <div class="acceptance-section">
+      <h3>三级部门承接情况 ${count > 0 ? `(${count})` : ''}</h3>
+  `;
+
+  if (count === 0) {
+    html += `
+      <div style="background:var(--red-light);border:1px solid #F09595;border-radius:8px;padding:20px;text-align:center;">
+        <div style="font-size:14px;color:#A32D2D;font-weight:500;margin-bottom:8px;">该指标暂无三级部门承接</div>
+        <div style="font-size:12px;color:var(--gray-700);margin-bottom:12px;">请指派三级部门承接此${item.type === 'kpi' ? 'KPI' : '重点工作'}</div>
+        <button class="btn-assign" onclick="alert('指派承接部门功能')">+ 指派承接部门</button>
+      </div>
+    `;
+  } else {
+    html += `
+      <table class="acceptance-table">
+        <thead>
+          <tr>
+            <th>三级部门</th>
+            <th>承接目标值</th>
+            <th>当前进度</th>
+            <th>状态</th>
+            ${item.type === 'task' ? '<th>H1里程碑</th><th>H2里程碑</th>' : ''}
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    item.acceptance.forEach(acc => {
+      const statusText = acc.status === 'done' ? '已完成' : acc.status === 'progress' ? '进行中' : '待启动';
+      const fillColor = acc.status;
+      html += `
+        <tr>
+          <td style="font-weight:500;">${acc.dept}</td>
+          <td>${acc.target}</td>
+          <td>
+            <div class="progress-bar"><div class="fill ${fillColor}" style="width:${acc.progress}%;"></div></div>
+            ${acc.progress}%
+          </td>
+          <td><span class="status-tag ${acc.status}">${statusText}</span></td>
+      `;
+      if (item.type === 'task') {
+        const h1m = acc.milestones?.find(m => m.type === 'H1');
+        const h2m = acc.milestones?.find(m => m.type === 'H2');
+        html += `
+          <td>${h1m ? `<span class="status-tag ${h1m.status}">${h1m.progress}%</span>` : '-'}</td>
+          <td>${h2m ? `<span class="status-tag ${h2m.status}">${h2m.progress}%</span>` : '-'}</td>
+        `;
+      }
+      html += `<td><a href="#" style="color:var(--primary);font-size:12px;" onclick="alert('查看${acc.dept}详情')">查看详情</a></td>`;
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+  }
+
+  html += `</div>`;
+
+  // Milestone Tree (for tasks)
+  if (item.type === 'task' && item.milestones) {
+    html += `
+      <div class="acceptance-section">
+        <h3>里程碑拆解</h3>
+        <div class="milestone-tree">
+    `;
+    item.milestones.forEach(ms => {
+      html += `
+        <div class="milestone-node">
+          <div class="ms-header">
+            <span class="ms-tag ${ms.type.toLowerCase()}">${ms.type}</span>
+            <span class="ms-name">${ms.name}</span>
+          </div>
+          <ul class="ms-tasks">
+            ${ms.tasks.map(t => `<li>${t}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+    });
+    html += `</div></div>`;
+  }
+
+  // Coverage summary
+  const totalItems = data.length;
+  const assignedItems = data.filter(d => getAcceptanceCount(d) > 0).length;
+  const coverage = Math.round(assignedItems / totalItems * 100);
+
+  html += `
+    <div class="coverage-section">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:14px;font-weight:500;">承接覆盖率</span>
+        <span class="coverage-text">${assignedItems}/${totalItems} 指标已承接
+          <span class="alert">${totalItems - assignedItems}项待指派</span>
+        </span>
+      </div>
+      <div class="coverage-bar-wrap">
+        <div class="coverage-bar"><div class="fill ${coverage < 80 ? 'partial' : ''}" style="width:${coverage}%;"></div></div>
+        <span class="coverage-text">${coverage}%</span>
+      </div>
+    </div>
+  `;
+
+  panel.innerHTML = html;
+}
+
+function filterType(type) {
+  currentFilter = type;
+  document.querySelectorAll('.toolbar .chip').forEach((c, i) => {
+    if (i < 4) c.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  renderLeftPanel();
+}
+
+// Init
+renderLeftPanel();
+selectItem('k1');
+</script>
+</body>
+</html>

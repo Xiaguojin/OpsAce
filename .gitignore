@@ -1,0 +1,4 @@
+dist/
+_syntax_check.py
+_upload.sh
+.workbuddy/

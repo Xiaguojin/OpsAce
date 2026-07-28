@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绩效管理系统设计方案 - 二级/三级部门层级联动</title>
+<style>
+:root {
+  --primary: #4361ee;
+  --teal: #0ebaa0;
+  --purple: #7c5cfc;
+  --amber: #f59e0b;
+  --red: #e74c3c;
+  --gray-50: #F8F9FB;
+  --gray-100: #F1EFE8;
+  --gray-200: #E0E0E0;
+  --gray-500: #888780;
+  --gray-700: #5F5E5A;
+  --gray-900: #2C2C2A;
+  --border: #E0E0E0;
+  --code-bg: #1e1e2e;
+  --code-text: #cdd6f4;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--gray-50); color: var(--gray-900);
+  font-size: 15px; line-height: 1.8;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* Typography */
+h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+h2 { font-size: 22px; font-weight: 600; margin: 40px 0 16px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); display: inline-block; }
+h3 { font-size: 18px; font-weight: 600; margin: 28px 0 12px; }
+h4 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: var(--gray-700); }
+p { margin-bottom: 12px; }
+.subtitle { font-size: 15px; color: var(--gray-500); margin-bottom: 32px; }
+
+/* Cards */
+.card {
+  background: #fff; border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; margin: 16px 0;
+}
+.card-highlight {
+  border-left: 4px solid var(--primary);
+}
+.card-teal { border-left: 4px solid var(--teal); }
+.card-purple { border-left: 4px solid var(--purple); }
+.card-amber { border-left: 4px solid var(--amber); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+th { background: var(--gray-100); padding: 10px 14px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); }
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+tr:hover td { background: var(--gray-50); }
+
+/* Code blocks */
+pre {
+  background: var(--code-bg); color: var(--code-text);
+  padding: 20px; border-radius: 8px; overflow-x: auto;
+  font-size: 13px; line-height: 1.6; margin: 12px 0;
+  font-family: "Fira Code", "Consolas", monospace;
+}
+pre .kw { color: #cba6f7; }
+pre .str { color: #a6e3a1; }
+pre .com { color: #6c7086; font-style: italic; }
+pre .fn { color: #89b4fa; }
+pre .num { color: #fab387; }
+
+/* Tags */
+.tag {
+  display: inline-block; padding: 2px 10px; border-radius: 4px;
+  font-size: 12px; font-weight: 500; margin-right: 6px;
+}
+.tag-blue { background: #E6F1FB; color: #185FA5; }
+.tag-teal { background: #E1F5EE; color: #0F6E56; }
+.tag-purple { background: #EEEDFE; color: #534AB7; }
+.tag-amber { background: #FAEEDA; color: #854F0B; }
+.tag-red { background: #FCEBEB; color: #A32D2D; }
+
+/* Lists */
+ul, ol { margin: 8px 0 12px 20px; }
+li { margin-bottom: 6px; }
+
+/* Flow diagram (CSS) */
+.flow {
+  display: flex; align-items: center; gap: 0; margin: 20px 0;
+  flex-wrap: wrap;
+}
+.flow-step {
+  padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  min-width: 120px; text-align: center;
+}
+.flow-arrow { font-size: 20px; color: var(--gray-500); margin: 0 8px; }
+
+/* Mockup layout */
+.mockup-frame {
+  border: 2px solid var(--border); border-radius: 12px; overflow: hidden;
+  margin: 16px 0;
+}
+.mockup-bar {
+  background: var(--primary); color: #fff; padding: 12px 20px;
+  font-size: 14px; font-weight: 600;
+}
+.mockup-body { display: flex; min-height: 300px; }
+.mockup-left {
+  width: 35%; border-right: 1px solid var(--border); padding: 16px;
+  background: #fff;
+}
+.mockup-right { flex: 1; padding: 16px; background: var(--gray-50); }
+.mockup-item {
+  padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;
+  font-size: 13px; cursor: pointer; border: 1px solid transparent;
+}
+.mockup-item.active { background: #E6F1FB; border-color: #B5D4F4; }
+.mockup-item:hover { background: var(--gray-50); }
+.mockup-acceptance {
+  padding: 8px 12px; background: #fff; border: 1px solid var(--border);
+  border-radius: 6px; margin-bottom: 8px; font-size: 13px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+/* Callout */
+.callout {
+  padding: 16px 20px; border-radius: 8px; margin: 16px 0;
+  font-size: 14px;
+}
+.callout-info { background: #E6F1FB; border-left: 4px solid var(--primary); }
+.callout-warn { background: #FAEEDA; border-left: 4px solid var(--amber); }
+.callout-success { background: #E1F5EE; border-left: 4px solid var(--teal); }
+
+/* Badge */
+.badge {
+  display: inline-block; padding: 4px 12px; border-radius: 6px;
+  font-size: 12px; font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>绩效管理系统设计方案</h1>
+<p class="subtitle">支持"二级部门 - 三级部门"层级联动 | Excel解析存储 | 跨层级指标承接 | 全景监控视图</p>
+
+<!-- ============================================================ -->
+<h2>一、系统总体架构</h2>
+
+<div class="card card-highlight">
+<p>系统采用三层架构设计，核心围绕<strong>"Excel解析 -> 结构化存储 -> 层级联动展示"</strong>的数据流展开：</p>
+
+<div class="flow">
+  <div class="flow-step" style="background:#FAEEDA;color:#854F0B;">Excel上传</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E6F1FB;color:#185FA5;">解析引擎<br><span style="font-size:11px;font-weight:400;">openpyxl + 合并单元格</span></div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E1F5EE;color:#0F6E56;">数据库存储<br><span style="font-size:11px;font-weight:400;">PostgreSQL 自关联</span></div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#EEEDFE;color:#534AB7;">层级联动<br><span style="font-size:11px;font-weight:400;">Parent_ID 血缘追溯</span></div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#FCEBEB;color:#A32D2D;">全景视图<br><span style="font-size:11px;font-weight:400;">树状 + 明细列表</span></div>
+</div>
+
+<table>
+  <tr><th>层级</th><th>组件</th><th>职责</th></tr>
+  <tr><td><span class="badge" style="background:#FAEEDA;color:#854F0B;">输入层</span></td><td>Excel上传 + 刷新机制</td><td>用户上传目标设定表，系统自动识别KPI和重点工作板块</td></tr>
+  <tr><td><span class="badge" style="background:#E6F1FB;color:#185FA5;">解析层</span></td><td>openpyxl解析引擎</td><td>处理合并单元格、表头识别、权重校验、数据清洗对齐</td></tr>
+  <tr><td><span class="badge" style="background:#E1F5EE;color:#0F6E56;">存储层</span></td><td>PostgreSQL + 自关联表</td><td>KPI/Task/Milestone三表，通过parent_id实现层级血缘</td></tr>
+  <tr><td><span class="badge" style="background:#EEEDFE;color:#534AB7;">联动层</span></td><td>跨层级承接引擎</td><td>三级部门从二级部门选项池勾选指标，建立Parent_ID关联</td></tr>
+  <tr><td><span class="badge" style="background:#FCEBEB;color:#A32D2D;">展示层</span></td><td>全景视图 + 看板</td><td>二级部门查看所有三级部门承接情况和进度</td></tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>二、数据库设计 (SQL DDL)</h2>
+
+<h3>2.1 设计要点</h3>
+
+<div class="card card-teal">
+<ul>
+  <li><strong>自关联设计</strong>：<code>performance_kpi.parent_kpi_id</code> 和 <code>performance_task.parent_task_id</code> 均为自引用外键，二级部门指标 <code>parent_id = NULL</code>，三级部门指标 <code>parent_id = 对应二级指标ID</code></li>
+  <li><strong>Excel追溯字段</strong>：每条记录保留 <code>excel_row_ref</code>（原始行号）、<code>excel_merge_range</code>（合并单元格范围）、<code>source_type</code>（excel/manual）、<code>excel_file_name</code>，支持覆盖更新时精准定位</li>
+  <li><strong>里程碑独立表</strong>：<code>performance_milestone</code> 通过 <code>task_id</code> 外键关联重点工作，支持 H1/H2 两种类型，<code>key_tasks</code> 以 JSONB 存储关键任务列表</li>
+  <li><strong>权重校验</strong>：<code>check_weight_total()</code> 函数实时校验某部门KPI+重点工作权重是否=100%</li>
+  <li><strong>部门自关联树</strong>：<code>department</code> 表通过 <code>parent_dept_id</code> 自关联，<code>dept_level</code> 字段区分二级(2)/三级(3)</li>
+</ul>
+</div>
+
+<h3>2.2 核心表结构</h3>
+
+<table>
+  <tr><th>表名</th><th>用途</th><th>关键字段</th><th>关联关系</th></tr>
+  <tr>
+    <td><code>department</code></td>
+    <td>部门表</td>
+    <td>dept_code, dept_name, dept_level, parent_dept_id</td>
+    <td>自关联树 (二级->三级)</td>
+  </tr>
+  <tr>
+    <td><code>performance_kpi</code></td>
+    <td>KPI关键绩效指标</td>
+    <td>indicator_name, weight, threshold/target/challenge_value, parent_kpi_id, excel_row_ref</td>
+    <td>自关联 + dept_id FK</td>
+  </tr>
+  <tr>
+    <td><code>performance_task</code></td>
+    <td>重点工作</td>
+    <td>task_name, weight, parent_task_id, excel_merge_range, excel_row_ref</td>
+    <td>自关联 + dept_id FK</td>
+  </tr>
+  <tr>
+    <td><code>performance_milestone</code></td>
+    <td>里程碑 (H1/H2)</td>
+    <td>milestone_type, milestone_name, key_tasks(JSONB), status</td>
+    <td>task_id FK -> performance_task</td>
+  </tr>
+  <tr>
+    <td><code>performance_bonus</code></td>
+    <td>加减分项</td>
+    <td>title, rule, score_delta, threshold/target/challenge_value</td>
+    <td>dept_id FK</td>
+  </tr>
+  <tr>
+    <td><code>excel_upload_batch</code></td>
+    <td>上传批次记录</td>
+    <td>file_name, file_hash, upload_mode, weight_total, weight_valid, parse_errors</td>
+    <td>dept_id FK</td>
+  </tr>
+</table>
+
+<h3>2.3 自关联设计详解</h3>
+
+<div class="card card-purple">
+<p><strong>核心思路</strong>：同一张表存储二级和三级部门的指标，通过 <code>parent_kpi_id</code> / <code>parent_task_id</code> 建立父子关系：</p>
+
+<pre><span class="com">-- 二级部门KPI: parent_kpi_id = NULL (根节点)</span>
+<span class="kw">INSERT INTO</span> performance_kpi (id, dept_id, parent_kpi_id, indicator_name, weight, ...)
+<span class="kw">VALUES</span> (<span class="str">'k1-l2'</span>, <span class="str">'dept-l2'</span>, <span class="kw">NULL</span>, <span class="str">'大版本节点达成率'</span>, <span class="num">0.10</span>, ...);
+
+<span class="com">-- 三级部门KPI: parent_kpi_id 指向二级部门KPI (子节点)</span>
+<span class="kw">INSERT INTO</span> performance_kpi (id, dept_id, parent_kpi_id, indicator_name, weight, ...)
+<span class="kw">VALUES</span> (<span class="str">'k1-l3-a'</span>, <span class="str">'dept-l3-a'</span>, <span class="str">'k1-l2'</span>, <span class="str">'大版本节点达成率(承接)'</span>, <span class="num">0.10</span>, ...);
+
+<span class="com">-- 查询: 某二级部门KPI被哪些三级部门承接</span>
+<span class="kw">SELECT</span> k2.indicator_name, d3.dept_name, k3.target_value, k3.completion_rate
+<span class="kw">FROM</span> performance_kpi k2
+<span class="kw">LEFT JOIN</span> performance_kpi k3 <span class="kw">ON</span> k3.parent_kpi_id = k2.id
+<span class="kw">LEFT JOIN</span> department d3 <span class="kw">ON</span> k3.dept_id = d3.id
+<span class="kw">WHERE</span> k2.id = <span class="str">'k1-l2'</span>;</pre>
+
+<p><strong>优势</strong>：无需跨表JOIN即可实现层级查询，支持递归CTE查询任意深度的指标血缘链。</p>
+</div>
+
+<h3>2.4 权重校验函数</h3>
+
+<pre><span class="com">-- 调用示例: 检查"集成维护开发部"2026年度权重</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> check_weight_total(<span class="str">'dept-uuid'</span>, <span class="num">2026</span>);
+
+<span class="com">-- 返回结果:</span>
+<span class="com">-- section  | total_weight | is_valid</span>
+<span class="com">-- ---------+--------------+---------</span>
+<span class="com">-- KPI      |         0.55 | t</span>
+<span class="com">-- 重点工作  |         0.45 | t</span>
+<span class="com">-- 合计      |         1.00 | t  <- 校验通过</span></pre>
+
+<!-- ============================================================ -->
+<h2>三、Excel解析逻辑 (Python)</h2>
+
+<h3>3.1 核心挑战：合并单元格处理</h3>
+
+<div class="card card-amber">
+<p>Excel中的重点工作板块通常使用<strong>合并单元格</strong>来表示"一个重点工作对应多个里程碑"的结构：</p>
+
+<table>
+  <tr><th>行号</th><th>B列 (任务名称)</th><th>C列 (权重)</th><th>D列 (H1/H2)</th><th>E列 (里程碑)</th><th>F列 (关键任务)</th></tr>
+  <tr><td>5</td><td rowspan="3" style="background:#E6F1FB;">大版本升级能力建设</td><td rowspan="3" style="background:#E6F1FB;">10%</td><td>H1</td><td>完成分支收编策略迭代</td><td>策略制定</td></tr>
+  <tr><td>6</td><td>H1</td><td>完成升级工程能力规划</td><td>SCMP整合</td></tr>
+  <tr><td>7</td><td>H2</td><td>支撑榫卯5.0落地</td><td>分层方案</td></tr>
+</table>
+
+<p><strong>问题</strong>：openpyxl 读取合并单元格时，只有左上角(B5)有值，B6和B7为None。</p>
+<p><strong>解决方案</strong>：构建合并单元格映射表，子单元格通过映射自动读取左上角的值。</p>
+</div>
+
+<h3>3.2 解析流程</h3>
+
+<div class="flow">
+  <div class="flow-step" style="background:#E6F1FB;color:#185FA5;font-size:12px;">1. 加载Workbook<br>识别Sheet</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E6F1FB;color:#185FA5;font-size:12px;">2. 构建合并映射<br>_build_merge_map()</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E6F1FB;color:#185FA5;font-size:12px;">3. 定位板块区域<br>KPI/重点工作/加减分</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E6F1FB;color:#185FA5;font-size:12px;">4. 检测表头列<br>_detect_columns()</div>
+</div>
+<div class="flow">
+  <div class="flow-step" style="background:#E1F5EE;color:#0F6E56;font-size:12px;">5. 逐行读取<br>_get_cell_value()</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E1F5EE;color:#0F6E56;font-size:12px;">6. 里程碑拆解<br>合并范围->子行</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E1F5EE;color:#0F6E56;font-size:12px;">7. 权重校验<br>sum=100%?</div>
+  <div class="flow-arrow">-></div>
+  <div class="flow-step" style="background:#E1F5EE;color:#0F6E56;font-size:12px;">8. 返回结构化数据<br>写入数据库</div>
+</div>
+
+<h3>3.3 核心代码逻辑</h3>
+
+<pre><span class="kw">def</span> <span class="fn">_build_merge_map</span>(self):
+    <span class="com">"""构建合并单元格映射表</span>
+<span class="com">    对于合并区域 B5:B7, 建立:</span>
+<span class="com">    { (6, 2): (5, 2), (7, 2): (5, 2) }</span>
+<span class="com">    子单元格通过映射找到左上角值"""</span>
+    merge_map = {}
+    <span class="kw">for</span> merged_range <span class="kw">in</span> self.ws.merged_cells.ranges:
+        min_col, min_row, max_col, max_row = range_boundaries(<span class="fn">str</span>(merged_range))
+        <span class="kw">for</span> row <span class="kw">in</span> <span class="fn">range</span>(min_row, max_row + <span class="num">1</span>):
+            <span class="kw">for</span> col <span class="kw">in</span> <span class="fn">range</span>(min_col, max_col + <span class="num">1</span>):
+                merge_map[(row, col)] = (min_row, min_col)
+    <span class="kw">return</span> merge_map
+
+<span class="kw">def</span> <span class="fn">_get_cell_value</span>(self, row, col):
+    <span class="com">"""获取单元格值, 合并单元格返回左上角值"""</span>
+    <span class="kw">if</span> (row, col) <span class="kw">in</span> self._merge_map:
+        top_row, top_col = self._merge_map[(row, col)]
+        <span class="kw">return</span> self.ws.cell(row=top_row, column=top_col).value
+    <span class="kw">return</span> self.ws.cell(row=row, column=col).value
+
+<span class="kw">def</span> <span class="fn">_parse_task_section</span>(self, section):
+    <span class="com">"""解析重点工作板块 - 处理合并单元格"""</span>
+    tasks = []
+    <span class="kw">for</span> row <span class="kw">in</span> <span class="fn">range</span>(data_start, max_row + <span class="num">1</span>):
+        <span class="kw">if</span> row <span class="kw">in</span> processed_rows:
+            <span class="kw">continue</span>
+
+        <span class="com"># 读取任务名称 (合并单元格自动返回左上角值)</span>
+        task_name = <span class="fn">str</span>(self.<span class="fn">_get_cell_value</span>(row, task_name_col) <span class="kw">or</span> <span class="str">""</span>).<span class="fn">strip</span>()
+
+        <span class="com"># 检测合并范围</span>
+        merge_range = self.<span class="fn">_get_merge_range_str</span>(row, task_name_col)
+        <span class="kw">if</span> merge_range:
+            min_col, min_row, max_col, max_row = range_boundaries(merge_range)
+            merged_row_count = max_row - min_row + <span class="num">1</span>
+        <span class="kw">else</span>:
+            min_row = max_row = row
+            merged_row_count = <span class="num">1</span>
+
+        <span class="com"># 创建重点工作对象, 从合并区域第一行读取主体字段</span>
+        task = <span class="fn">TaskRow</span>(task_name=task_name, excel_row_ref=row,
+                         excel_merge_range=merge_range)
+        task.weight = self.<span class="fn">_parse_weight</span>(<span class="fn">str</span>(self.<span class="fn">_get_cell_value</span>(row, weight_col)))
+
+        <span class="com"># 遍历合并范围内的每一行 -> 每行是一个里程碑</span>
+        <span class="kw">for</span> sub_row <span class="kw">in</span> <span class="fn">range</span>(min_row, max_row + <span class="num">1</span>):
+            processed_rows.add(sub_row)
+            milestone = <span class="fn">MilestoneRow</span>(excel_row_ref=sub_row)
+            milestone.milestone_type = <span class="fn">str</span>(self.<span class="fn">_get_cell_value</span>(sub_row, ms_type_col) <span class="kw">or</span> <span class="str">""</span>).<span class="fn">strip</span>()
+            milestone.milestone_name = <span class="fn">str</span>(self.<span class="fn">_get_cell_value</span>(sub_row, ms_name_col) <span class="kw">or</span> <span class="str">""</span>).<span class="fn">strip</span>()
+            <span class="com"># 关键任务按换行符/分号拆分</span>
+            kt_val = <span class="fn">str</span>(self.<span class="fn">_get_cell_value</span>(sub_row, kt_col) <span class="kw">or</span> <span class="str">""</span>).<span class="fn">strip</span>()
+            milestone.key_tasks = [t.<span class="fn">strip</span>() <span class="kw">for</span> t <span class="kw">in</span> <span class="fn">re.split</span>(<span class="str">r'[\n;；•·]+'</span>, kt_val) <span class="kw">if</span> t.<span class="fn">strip</span>()]
+            task.milestones.append(milestone)
+
+        tasks.append(task)
+    <span class="kw">return</span> tasks</pre>
+
+<h3>3.4 刷新规则：覆盖更新 vs 增量更新</h3>
+
+<div class="card">
+<table>
+  <tr><th>模式</th><th>说明</th><th>适用场景</th><th>数据安全性</th></tr>
+  <tr>
+    <td><span class="tag tag-red">覆盖更新</span></td>
+    <td>清除该部门该年度所有Excel来源的数据，重新写入。手动添加的数据可通过<code>source_type='manual'</code>保留</td>
+    <td>年度目标重新设定、大规模调整</td>
+    <td>中 (会清除旧数据)</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-teal">增量更新</span></td>
+    <td>按<code>(dept_id, fiscal_year, indicator_name)</code>唯一键匹配，存在则更新，不存在则新增。通过<code>file_hash</code>跳过重复文件</td>
+    <td>日常修改、局部调整</td>
+    <td>高 (保留已有数据)</td>
+  </tr>
+</table>
+
+<div class="callout callout-info">
+<strong>权重校验时机</strong>：每次解析完成后自动计算 <code>weight_kpi_total + weight_task_total</code>，如果不等于1.00(100%)，在<code>excel_upload_batch.weight_valid</code>标记为FALSE，并返回警告信息。
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2>四、跨层级联动与承接 (1对多)</h2>
+
+<h3>4.1 承接机制设计</h3>
+
+<div class="card card-purple">
+<p><strong>核心规则</strong>：三级部门在制定绩效时，其KPI和重点工作的选项池<strong>必须来源于所属的二级部门</strong>。三级部门只能从二级部门的指标中进行勾选或引用（承接）。</p>
+
+<h4>承接流程</h4>
+<ol>
+  <li><strong>二级部门设定目标</strong>：二级部门负责人上传Excel，系统解析为KPI和重点工作，存入数据库（<code>parent_kpi_id = NULL</code>）</li>
+  <li><strong>三级部门查看选项池</strong>：三级部门负责人登录后，系统根据<code>dept.parent_dept_id</code>查询其所属二级部门的所有KPI和重点工作，作为"可承接指标列表"</li>
+  <li><strong>三级部门勾选承接</strong>：三级部门从选项池中勾选需要承接的指标，系统创建新的KPI/Task记录，<code>parent_kpi_id</code> / <code>parent_task_id</code> 指向二级部门指标</li>
+  <li><strong>设置承接目标值</strong>：三级部门可在二级部门目标值基础上调整自己的目标值（如二级目标80%，三级可设82%）</li>
+  <li><strong>里程碑拆解</strong>：对于重点工作，三级部门可对H1/H2里程碑进行进一步拆解，添加自己的关键任务</li>
+</ol>
+</div>
+
+<h3>4.2 数据映射与血缘追溯</h3>
+
+<pre><span class="com">-- 查询: 某二级部门的KPI被哪些三级部门承接 (数据血缘)</span>
+<span class="kw">WITH RECURSIVE</span> kpi_tree <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> id, dept_id, parent_kpi_id, indicator_name, <span class="num">0</span> <span class="kw">AS</span> depth
+    <span class="kw">FROM</span> performance_kpi
+    <span class="kw">WHERE</span> dept_id = <span class="str">'dept-l2-001'</span> <span class="kw">AND</span> parent_kpi_id <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="kw">SELECT</span> k.id, k.dept_id, k.parent_kpi_id, k.indicator_name, t.depth + <span class="num">1</span>
+    <span class="kw">FROM</span> performance_kpi k
+    <span class="kw">JOIN</span> kpi_tree t <span class="kw">ON</span> k.parent_kpi_id = t.id
+)
+<span class="kw">SELECT</span>
+    t.indicator_name,
+    d.dept_name,
+    d.dept_level,
+    t.depth,
+    k.target_value,
+    k.completion_rate
+<span class="kw">FROM</span> kpi_tree t
+<span class="kw">JOIN</span> department d <span class="kw">ON</span> t.dept_id = d.id
+<span class="kw">LEFT JOIN</span> performance_kpi k <span class="kw">ON</span> t.id = k.id
+<span class="kw">ORDER BY</span> t.depth, t.indicator_name;</pre>
+
+<!-- ============================================================ -->
+<h2>五、二级部门全景视图 (交互原型)</h2>
+
+<h3>5.1 页面布局设计</h3>
+
+<div class="callout callout-info">
+<strong>设计原则</strong>：左右分栏布局。左侧为二级部门的KPI/重点工作列表（可点击切换），右侧展开显示各三级部门对该指标的承接情况和当前进度。底部显示承接覆盖率总览。
+</div>
+
+<div class="mockup-frame">
+  <div class="mockup-bar">集成维护开发部 - 二级部门全景视图 | 管理员: 夏国晋 | 2026年度</div>
+  <div style="background:#fff;padding:8px 16px;border-bottom:1px solid var(--border);font-size:12px;color:var(--gray-500);">
+    筛选: [全部KPI] [全部三级部门] [全部状态] &nbsp;&nbsp; 权重合计: 100% (校验通过)
+  </div>
+  <div class="mockup-body">
+    <div class="mockup-left">
+      <div style="font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+        二级部门 KPI / 重点工作 &nbsp;&nbsp; 权重
+      </div>
+      <div class="mockup-item active">
+        <span style="color:var(--primary);">●</span> 大版本节点达成率 <span style="float:right;color:var(--primary);font-weight:600;">10%</span>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">软件交付质量 | <span style="background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:3px;">2个三级承接</span></div>
+      </div>
+      <div class="mockup-item">
+        <span style="color:var(--primary);">●</span> 集成维护承接节点达成率 <span style="float:right;color:var(--primary);font-weight:600;">10%</span>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">软件交付质量 | <span style="background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:3px;">2个三级承接</span></div>
+      </div>
+      <div class="mockup-item">
+        <span style="color:var(--purple);">●</span> 大版本升级能力建设 <span style="float:right;color:var(--purple);font-weight:600;">10%</span>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">重点工作 | <span style="background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:3px;">2个三级承接</span></div>
+      </div>
+      <div class="mockup-item">
+        <span style="color:var(--primary);">●</span> 升级项目降本增效 <span style="float:right;color:var(--primary);font-weight:600;">15%</span>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">升级项目降本增效 | <span style="background:#FCEBEB;color:#A32D2D;padding:1px 6px;border-radius:3px;">未承接</span></div>
+      </div>
+      <div class="mockup-item">
+        <span style="color:var(--primary);">●</span> 三方生态合作 <span style="float:right;color:var(--primary);font-weight:600;">15%</span>
+        <div style="font-size:11px;color:var(--gray-500);margin-top:2px;">三方生态合作 | <span style="background:#E1F5EE;color:#0F6E56;padding:1px 6px;border-radius:3px;">1个三级承接</span></div>
+      </div>
+    </div>
+    <div class="mockup-right">
+      <div style="font-size:16px;font-weight:600;margin-bottom:4px;">大版本节点达成率 <span class="tag tag-blue">KPI</span></div>
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">软件交付质量 | 目标值: 80% | 数据来源: 研发质量部 | 上周期: 98.44%</div>
+
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">三级部门承接情况 (2)</div>
+      <div class="mockup-acceptance">
+        <div>
+          <span style="color:var(--teal);">●</span> 升级交付组<br>
+          <span style="font-size:11px;color:var(--gray-500);">目标: 82%</span>
+        </div>
+        <div style="text-align:right;">
+          <span class="tag tag-teal">已完成</span><br>
+          <span style="font-size:12px;">进度: 100%</span>
+        </div>
+      </div>
+      <div class="mockup-acceptance">
+        <div>
+          <span style="color:var(--amber);">●</span> 质量保障组<br>
+          <span style="font-size:11px;color:var(--gray-500);">目标: 78%</span>
+        </div>
+        <div style="text-align:right;">
+          <span class="tag tag-amber">进行中</span><br>
+          <span style="font-size:12px;">进度: 72%</span>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px;">承接覆盖率</div>
+        <div style="height:10px;background:var(--gray-100);border-radius:5px;overflow:hidden;">
+          <div style="width:80%;height:100%;background:var(--teal);border-radius:5px;"></div>
+        </div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">8/10 指标已承接 (80%) | <span style="color:var(--red);">2项待指派</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>5.2 交互逻辑说明</h3>
+
+<div class="card">
+<table>
+  <tr><th>交互行为</th><th>触发条件</th><th>系统响应</th></tr>
+  <tr>
+    <td>点击左侧KPI/重点工作</td>
+    <td>用户点击左侧列表项</td>
+    <td>右侧面板切换为该指标的承接详情，左侧高亮选中项</td>
+  </tr>
+  <tr>
+    <td>筛选未承接指标</td>
+    <td>点击"未承接"筛选标签</td>
+    <td>左侧仅显示无三级部门承接的指标，红色标签提示"需指派"</td>
+  </tr>
+  <tr>
+    <td>展开里程碑</td>
+    <td>点击重点工作名称</td>
+    <td>右侧显示H1/H2里程碑树状结构，每个里程碑下展示关键任务列表</td>
+  </tr>
+  <tr>
+    <td>查看三级部门详情</td>
+    <td>点击承接列表中的"查看详情"</td>
+    <td>跳转到三级部门看板，定位到该指标的具体执行情况</td>
+  </tr>
+  <tr>
+    <td>指派承接部门</td>
+    <td>点击"需指派"按钮</td>
+    <td>弹出三级部门选择列表，选择后自动创建parent_id关联</td>
+  </tr>
+  <tr>
+    <td>权重校验提示</td>
+    <td>页面加载 / Excel上传后</td>
+    <td>顶部工具栏显示"权重合计: XX% (校验通过/不通过)"</td>
+  </tr>
+</table>
+</div>
+
+<h3>5.3 关键信息展示规则</h3>
+
+<div class="card card-teal">
+<ul>
+  <li><strong>承接状态色标</strong>：绿色=已完成，橙色=进行中，红色=待启动/未承接</li>
+  <li><strong>进度条</strong>：每个三级部门承接项显示当前完成率进度条，颜色与状态一致</li>
+  <li><strong>里程碑展开</strong>：重点工作以树状结构展示H1/H2里程碑，每个里程碑节点显示"哪些三级部门在执行"及其进度</li>
+  <li><strong>覆盖率总览</strong>：页面底部显示"X/N 指标已承接 (XX%)"，未承接项数量标红提醒</li>
+  <li><strong>权重校验</strong>：右上角实时显示权重合计是否=100%，不通过时标橙色警告</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>六、交付物清单</h2>
+
+<div class="card card-highlight">
+<table>
+  <tr><th>文件</th><th>说明</th></tr>
+  <tr><td><code>performance_schema.sql</code></td><td>完整的数据库DDL，含6张表、2个视图、1个权重校验函数</td></tr>
+  <tr><td><code>excel_parser.py</code></td><td>Python Excel解析引擎，含合并单元格处理、板块识别、权重校验的完整实现</td></tr>
+  <tr><td><code>l2_panorama_prototype.html</code></td><td>二级部门全景视图可交互原型，基于原始看板真实KPI数据</td></tr>
+  <tr><td><code>system_design.html</code></td><td>本设计方案文档</td></tr>
+</table>
+</div>
+
+<div class="callout callout-success">
+<strong>设计总结</strong>：本方案通过<strong>自关联表设计</strong>实现了二级-三级部门的层级联动，通过<strong>合并单元格映射表</strong>解决了Excel解析的核心难题，通过<strong>全景视图</strong>让二级部门负责人一目了然地掌握所有三级部门的承接情况和执行进度。权限控制复用已有的管理员机制（夏国晋、剡飞龙），管理员可配置各级看板的访问人员。
+</div>
+
+</div>
+</body>
+</html>

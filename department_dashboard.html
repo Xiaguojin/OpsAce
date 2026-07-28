@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部门看板系统 - 权限管理</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1d29;
+    --bg-card: #222639;
+    --bg-hover: #2a2f45;
+    --border: #2d3148;
+    --text-primary: #e4e6f0;
+    --text-secondary: #8b8fa8;
+    --text-muted: #5a5e7a;
+    --accent: #4f7cff;
+    --accent-hover: #3a6bef;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --purple: #a855f7;
+    --teal: #14b8a6;
+    --radius: 10px;
+    --shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Login Screen ===== */
+  .login-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15,17,23,0.95);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(8px);
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    width: 400px;
+    max-width: 90vw;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .login-box h2 { font-size: 22px; margin-bottom: 8px; }
+  .login-box p { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+  .login-box input {
+    width: 100%; padding: 12px 16px;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-size: 15px;
+    margin-bottom: 16px; transition: border-color 0.2s;
+  }
+  .login-box input:focus { outline: none; border-color: var(--accent); }
+  .login-box button {
+    width: 100%; padding: 12px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .login-box button:hover { background: var(--accent-hover); }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 18px; }
+  .login-hint { color: var(--text-muted); font-size: 12px; margin-top: 16px; }
+
+  /* ===== Header ===== */
+  .header {
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header-logo { font-size: 18px; font-weight: 700; }
+  .header-logo span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .user-badge {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 14px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 20px;
+    font-size: 13px;
+  }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600;
+  }
+  .btn {
+    padding: 8px 16px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text-primary);
+    border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger { color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover { background: rgba(239,68,68,0.1); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    display: flex; gap: 4px; padding: 16px 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 20px; cursor: pointer;
+    font-size: 14px; color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab.disabled { opacity: 0.4; cursor: not-allowed; }
+  .tab .lock-icon { font-size: 12px; }
+  .tab-badge {
+    font-size: 10px; padding: 2px 6px;
+    background: var(--bg-card); border-radius: 4px;
+    color: var(--text-muted);
+  }
+  .tab.active .tab-badge { background: var(--accent); color: #fff; }
+
+  /* ===== Main Content ===== */
+  .main-content { padding: 24px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ===== KPI Cards ===== */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .kpi-label { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; }
+  .kpi-change { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .kpi-change.up { color: var(--success); }
+  .kpi-change.down { color: var(--danger); }
+  .kpi-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; float: right; margin-top: -8px;
+  }
+
+  /* ===== Charts ===== */
+  .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-row.single { grid-template-columns: 1fr; }
+  .chart-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .chart-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .chart-canvas-wrap { position: relative; width: 100%; }
+  canvas { max-width: 100%; }
+
+  /* ===== Data Table ===== */
+  .table-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .table-header h3 { font-size: 15px; }
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    padding: 12px 20px; text-align: left;
+    font-size: 12px; color: var(--text-secondary); font-weight: 600;
+    border-bottom: 1px solid var(--border); text-transform: uppercase;
+  }
+  .data-table td {
+    padding: 12px 20px; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--bg-hover); }
+  .status-tag {
+    display: inline-block; padding: 3px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 600;
+  }
+  .status-tag.green { background: rgba(34,197,94,0.15); color: var(--success); }
+  .status-tag.yellow { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .status-tag.red { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+  /* ===== Settings Modal ===== */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); display: none;
+    align-items: center; justify-content: center;
+    z-index: 1000; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 16px; width: 600px; max-width: 90vw;
+    max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow);
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-header h2 { font-size: 18px; }
+  .modal-close { cursor: pointer; font-size: 22px; color: var(--text-muted); transition: color 0.2s; }
+  .modal-close:hover { color: var(--text-primary); }
+  .modal-body { padding: 24px; }
+
+  /* Permission Section */
+  .perm-section {
+    margin-bottom: 24px; padding: 20px;
+    background: var(--bg-secondary); border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .perm-section:last-child { margin-bottom: 0; }
+  .perm-section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .perm-section-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .perm-level-badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    font-weight: 600;
+  }
+  .perm-level-badge.l1 { background: rgba(79,124,255,0.2); color: var(--accent); }
+  .perm-level-badge.l2 { background: rgba(168,85,247,0.2); color: var(--purple); }
+  .perm-section-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  .perm-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .perm-input-row input {
+    flex: 1; padding: 10px 14px;
+    background: var(--bg-primary); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text-primary); font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  .perm-input-row input:focus { outline: none; border-color: var(--accent); }
+
+  .perm-users-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .perm-user-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; background: var(--bg-primary);
+    border: 1px solid var(--border); border-radius: 20px;
+    font-size: 13px;
+  }
+  .perm-user-chip .remove-btn {
+    cursor: pointer; color: var(--text-muted); font-size: 16px;
+    line-height: 1; transition: color 0.2s;
+  }
+  .perm-user-chip .remove-btn:hover { color: var(--danger); }
+  .perm-empty { color: var(--text-muted); font-size: 13px; font-style: italic; }
+
+  /* ===== Access Denied ===== */
+  .access-denied {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 60px 20px; text-align: center;
+  }
+  .access-denied .icon { font-size: 48px; margin-bottom: 16px; }
+  .access-denied h3 { font-size: 18px; margin-bottom: 8px; }
+  .access-denied p { color: var(--text-secondary); font-size: 14px; max-width: 360px; }
+
+  /* ===== Bar Chart (CSS) ===== */
+  .bar-chart { display: flex; flex-direction: column; gap: 12px; }
+  .bar-item { display: flex; align-items: center; gap: 12px; }
+  .bar-label { width: 100px; font-size: 12px; color: var(--text-secondary); text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 24px; background: var(--bg-secondary); border-radius: 6px; overflow: hidden; position: relative; }
+  .bar-fill {
+    height: 100%; border-radius: 6px;
+    transition: width 0.6s ease;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 8px; font-size: 11px; font-weight: 600; color: #fff;
+  }
+
+  /* ===== Donut Chart ===== */
+  .donut-wrap { display: flex; align-items: center; gap: 24px; }
+  .donut-center {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%); text-align: center;
+  }
+  .donut-center .num { font-size: 24px; font-weight: 700; }
+  .donut-center .lbl { font-size: 11px; color: var(--text-secondary); }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ===== Department Tree ===== */
+  .dept-tree { padding: 8px 0; }
+  .dept-node { padding: 8px 0; }
+  .dept-node-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .dept-node-header:hover { background: var(--bg-hover); }
+  .dept-toggle { font-size: 12px; width: 16px; transition: transform 0.2s; }
+  .dept-toggle.open { transform: rotate(90deg); }
+  .dept-name { font-size: 14px; font-weight: 500; }
+  .dept-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+  .dept-children { padding-left: 28px; display: none; }
+  .dept-children.open { display: block; }
+  .dept-level-tag {
+    font-size: 10px; padding: 2px 6px; border-radius: 3px;
+    font-weight: 600;
+  }
+  .dept-level-tag.l2 { background: rgba(79,124,255,0.2); color: var(--accent); }
+  .dept-level-tag.l3 { background: rgba(168,85,247,0.2); color: var(--purple); }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 900px) {
+    .chart-row { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .header { padding: 0 12px; }
+    .main-content { padding: 12px; }
+    .tabs { padding: 12px 12px 0; overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Login Screen ===== -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>部门看板系统</h2>
+    <p>请输入您的姓名以登录</p>
+    <input type="text" id="loginName" placeholder="请输入姓名" autocomplete="off">
+    <button onclick="handleLogin()">登录</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-hint">提示：管理员（夏国晋、剡飞龙）可管理权限配置</div>
+  </div>
+</div>
+
+<!-- ===== Header ===== -->
+<div class="header" id="appHeader" style="display:none;">
+  <div class="header-left">
+    <div class="header-logo">部门<span>看板</span></div>
+  </div>
+  <div class="header-right">
+    <div class="user-badge">
+      <div class="user-avatar" id="userAvatar"></div>
+      <span id="userName"></span>
+    </div>
+    <button class="btn" id="settingsBtn" onclick="openSettings()" style="display:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      权限设置
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="handleLogout()">退出</button>
+  </div>
+</div>
+
+<!-- ===== Tabs ===== -->
+<div class="tabs" id="tabsBar" style="display:none;">
+  <div class="tab active" data-tab="level2" onclick="switchTab('level2')">
+    二级部门看板
+    <span class="tab-badge">L1</span>
+  </div>
+  <div class="tab" data-tab="level3" onclick="switchTab('level3')">
+    三级部门看板
+    <span class="tab-badge">L2</span>
+  </div>
+  <div class="tab" data-tab="overview" onclick="switchTab('overview')">
+    部门总览
+  </div>
+</div>
+
+<!-- ===== Main Content ===== -->
+<div class="main-content" id="mainContent" style="display:none;">
+
+  <!-- Tab: Level 2 Dashboard -->
+  <div class="tab-panel active" id="panel-level2">
+    <div class="kpi-grid" id="l2Kpis"></div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">各二级部门绩效趋势</div>
+        <div class="chart-canvas-wrap">
+          <canvas id="l2TrendChart" width="500" height="220"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">资源分配占比</div>
+        <div class="donut-wrap" style="position:relative;">
+          <div class="chart-canvas-wrap" style="position:relative;width:160px;height:160px;">
+            <canvas id="l2DonutChart" width="160" height="160"></canvas>
+            <div class="donut-center">
+              <div class="num" id="l2DonutNum">100%</div>
+              <div class="lbl">总分配</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="l2DonutLegend"></div>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <h3>二级部门明细</h3>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>部门名称</th>
+            <th>负责人</th>
+            <th>人数</th>
+            <th>绩效完成率</th>
+            <th>预算执行</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="l2TableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Level 3 Dashboard -->
+  <div class="tab-panel" id="panel-level3">
+    <div class="kpi-grid" id="l3Kpis"></div>
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">各三级部门任务完成情况</div>
+        <div class="bar-chart" id="l3BarChart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">任务状态分布</div>
+        <div class="donut-wrap" style="position:relative;">
+          <div class="chart-canvas-wrap" style="position:relative;width:160px;height:160px;">
+            <canvas id="l3DonutChart" width="160" height="160"></canvas>
+            <div class="donut-center">
+              <div class="num" id="l3DonutNum">0</div>
+              <div class="lbl">总任务</div>
+            </div>
+          </div>
+          <div class="donut-legend" id="l3DonutLegend"></div>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <h3>三级部门明细</h3>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>部门名称</th>
+            <th>上级部门</th>
+            <th>负责人</th>
+            <th>任务总数</th>
+            <th>完成率</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="l3TableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab: Overview -->
+  <div class="tab-panel" id="panel-overview">
+    <div class="chart-card">
+      <div class="chart-title">部门组织架构</div>
+      <div class="dept-tree" id="deptTree"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== Settings Modal ===== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>权限管理设置</h2>
+      <span class="modal-close" onclick="closeSettings()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;">
+        权限分为两级：<strong style="color:var(--accent);">一级权限</strong>可访问二级部门看板，
+        <strong style="color:var(--purple);">二级权限</strong>可访问三级部门看板。请为每级权限配置可访问的人员姓名。
+        <strong style="color:var(--warning);">管理员</strong>可管理权限配置并自动拥有全部看板访问权。
+      </p>
+
+      <!-- Admin Section -->
+      <div class="perm-section">
+        <div class="perm-section-header">
+          <div>
+            <div class="perm-section-title">
+              管理员配置
+              <span class="perm-level-badge" style="background:rgba(245,158,11,0.15);color:var(--warning);">管理员</span>
+            </div>
+            <div class="perm-section-desc">管理员可管理权限配置，自动拥有全部看板访问权</div>
+          </div>
+        </div>
+        <div class="perm-input-row">
+          <input type="text" id="adminPermInput" placeholder="输入姓名后按回车添加" onkeydown="if(event.key==='Enter')addPermUser('admins')">
+          <button class="btn btn-primary btn-sm" onclick="addPermUser('admins')">添加</button>
+        </div>
+        <div class="perm-users-list" id="adminsPermList"></div>
+      </div>
+
+      <!-- Level 1 Permission (二级部门看板) -->
+      <div class="perm-section">
+        <div class="perm-section-header">
+          <div>
+            <div class="perm-section-title">
+              二级部门看板
+              <span class="perm-level-badge l1">一级权限</span>
+            </div>
+            <div class="perm-section-desc">配置可访问二级部门看板的人员</div>
+          </div>
+        </div>
+        <div class="perm-input-row">
+          <input type="text" id="l2PermInput" placeholder="输入姓名后按回车添加" onkeydown="if(event.key==='Enter')addPermUser('l2')">
+          <button class="btn btn-primary btn-sm" onclick="addPermUser('l2')">添加</button>
+        </div>
+        <div class="perm-users-list" id="l2PermList"></div>
+      </div>
+
+      <!-- Level 2 Permission (三级部门看板) -->
+      <div class="perm-section">
+        <div class="perm-section-header">
+          <div>
+            <div class="perm-section-title">
+              三级部门看板
+              <span class="perm-level-badge l2">二级权限</span>
+            </div>
+            <div class="perm-section-desc">配置可访问三级部门看板的人员</div>
+          </div>
+        </div>
+        <div class="perm-input-row">
+          <input type="text" id="l3PermInput" placeholder="输入姓名后按回车添加" onkeydown="if(event.key==='Enter')addPermUser('l3')">
+          <button class="btn btn-primary btn-sm" onclick="addPermUser('l3')">添加</button>
+        </div>
+        <div class="perm-users-list" id="l3PermList"></div>
+      </div>
+
+      <div style="margin-top:20px;padding:16px;background:var(--bg-secondary);border-radius:8px;border:1px solid var(--border);">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">说明</div>
+        <ul style="font-size:12px;color:var(--text-secondary);padding-left:20px;line-height:1.8;">
+          <li><strong style="color:var(--warning);">管理员</strong>：可管理权限配置，自动拥有全部看板访问权</li>
+          <li>一级权限：可查看二级部门看板数据（汇总视角）</li>
+          <li>二级权限：可查看三级部门看板数据（明细视角）</li>
+          <li>同一人员可同时拥有多级权限</li>
+          <li>配置变更后实时生效，无需重新登录</li>
+          <li>权限数据保存在本地浏览器中</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Data Model =====
+const DEPT_DATA = {
+  level2: [
+    { name: '研发中心', head: '张伟', count: 156, perf: 92, budget: 88, status: 'green' },
+    { name: '产品中心', head: '李娜', count: 68, perf: 85, budget: 76, status: 'green' },
+    { name: '市场营销部', head: '王强', count: 42, perf: 78, budget: 95, status: 'yellow' },
+    { name: '运营中心', head: '刘洋', count: 85, perf: 88, budget: 82, status: 'green' },
+    { name: '财务部', head: '陈静', count: 24, perf: 95, budget: 91, status: 'green' },
+    { name: '人力资源部', head: '赵磊', count: 18, perf: 72, budget: 68, status: 'yellow' },
+  ],
+  level3: [
+    { name: '前端开发组', parent: '研发中心', head: '孙明', tasks: 48, completion: 90, status: 'green' },
+    { name: '后端开发组', parent: '研发中心', head: '周杰', tasks: 56, completion: 85, status: 'green' },
+    { name: '测试质量组', parent: '研发中心', head: '吴芳', tasks: 32, completion: 88, status: 'green' },
+    { name: '架构设计组', parent: '研发中心', head: '郑宇', tasks: 18, completion: 72, status: 'yellow' },
+    { name: '产品策划组', parent: '产品中心', head: '冯雪', tasks: 24, completion: 83, status: 'green' },
+    { name: 'UI设计组', parent: '产品中心', head: '蒋涛', tasks: 36, completion: 91, status: 'green' },
+    { name: '用户研究组', parent: '产品中心', head: '韩梅', tasks: 12, completion: 75, status: 'yellow' },
+    { name: '品牌推广组', parent: '市场营销部', head: '杨帆', tasks: 20, completion: 70, status: 'yellow' },
+    { name: '渠道合作组', parent: '市场营销部', head: '朱琳', tasks: 15, completion: 65, status: 'red' },
+    { name: '内容运营组', parent: '运营中心', head: '秦昊', tasks: 28, completion: 82, status: 'green' },
+    { name: '数据分析组', parent: '运营中心', head: '尤佳', tasks: 22, completion: 89, status: 'green' },
+    { name: '客户成功组', parent: '运营中心', head: '许峰', tasks: 35, completion: 77, status: 'yellow' },
+    { name: '会计核算组', parent: '财务部', head: '何丽', tasks: 18, completion: 95, status: 'green' },
+    { name: '资金管理组', parent: '财务部', head: '吕刚', tasks: 10, completion: 92, status: 'green' },
+    { name: '招聘培训组', parent: '人力资源部', head: '施雯', tasks: 14, completion: 68, status: 'yellow' },
+    { name: '薪酬绩效组', parent: '人力资源部', head: '张鑫', tasks: 8, completion: 75, status: 'yellow' },
+  ]
+};
+
+// ===== Permission Management =====
+const STORAGE_KEY = 'dept_dashboard_permissions';
+const SESSION_KEY = 'dept_dashboard_current_user';
+
+function getDefaultPermissions() {
+  return {
+    admins: ['夏国晋', '剡飞龙'], // 管理员：可管理权限配置，自动拥有全部看板访问权
+    l2: ['张伟', '李娜', '王强', '刘洋', '陈静', '赵磊'], // 一级权限：二级部门看板
+    l3: ['孙明', '周杰', '吴芳', '郑宇', '冯雪', '蒋涛', '韩梅'], // 二级权限：三级部门看板
+  };
+}
+
+function loadPermissions() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Ensure admins field exists (for backward compatibility)
+      if (!parsed.admins) {
+        parsed.admins = getDefaultPermissions().admins;
+      }
+      return parsed;
+    }
+  } catch(e) {}
+  return getDefaultPermissions();
+}
+
+function savePermissions(perms) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(perms));
+}
+
+let permissions = loadPermissions();
+let currentUser = null;
+
+// ===== Login =====
+function handleLogin() {
+  const name = document.getElementById('loginName').value.trim();
+  const errorEl = document.getElementById('loginError');
+  errorEl.textContent = '';
+
+  if (!name) {
+    errorEl.textContent = '请输入姓名';
+    return;
+  }
+
+  const isAdmin = permissions.admins.includes(name);
+  const hasL2 = isAdmin || permissions.l2.includes(name);
+  const hasL3 = isAdmin || permissions.l3.includes(name);
+
+  if (!hasL2 && !hasL3) {
+    errorEl.textContent = '您没有访问权限，请联系管理员在权限设置中添加您的姓名';
+    return;
+  }
+
+  currentUser = { name, isAdmin, hasL2, hasL3 };
+  sessionStorage.setItem(SESSION_KEY, name);
+  showApp();
+}
+
+function handleLogout() {
+  currentUser = null;
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('appHeader').style.display = 'none';
+  document.getElementById('tabsBar').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('loginName').value = '';
+}
+
+function showApp() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('appHeader').style.display = 'flex';
+  document.getElementById('tabsBar').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'block';
+
+  document.getElementById('userName').textContent = currentUser.name;
+  document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
+
+  // Show/hide settings button based on admin status
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (currentUser.isAdmin) {
+    settingsBtn.style.display = '';
+    // Show admin badge next to user name
+    const userNameEl = document.getElementById('userName');
+    userNameEl.innerHTML = currentUser.name + ' <span style="color:var(--warning);font-size:11px;font-weight:600;border:1px solid var(--warning);padding:1px 6px;border-radius:4px;margin-left:6px;">管理员</span>';
+  } else {
+    settingsBtn.style.display = 'none';
+    document.getElementById('userName').textContent = currentUser.name;
+  }
+
+  // Update tab accessibility
+  const l2Tab = document.querySelector('.tab[data-tab="level2"]');
+  const l3Tab = document.querySelector('.tab[data-tab="level3"]');
+
+  if (!currentUser.hasL2) {
+    l2Tab.classList.add('disabled');
+    l2Tab.innerHTML = '二级部门看板 <span class="lock-icon">🔒</span>';
+  } else {
+    l2Tab.classList.remove('disabled');
+    l2Tab.innerHTML = '二级部门看板 <span class="tab-badge">L1</span>';
+  }
+
+  if (!currentUser.hasL3) {
+    l3Tab.classList.add('disabled');
+    l3Tab.innerHTML = '三级部门看板 <span class="lock-icon">🔒</span>';
+  } else {
+    l3Tab.classList.remove('disabled');
+    l3Tab.innerHTML = '三级部门看板 <span class="tab-badge">L2</span>';
+  }
+
+  // Switch to first accessible tab
+  if (currentUser.hasL2) {
+    switchTab('level2');
+  } else if (currentUser.hasL3) {
+    switchTab('level3');
+  }
+
+  renderAllDashboards();
+}
+
+// ===== Tab Switching =====
+function switchTab(tabName) {
+  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+  if (tab.classList.contains('disabled')) return;
+
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+  tab.classList.add('active');
+  document.getElementById(`panel-${tabName}`).classList.add('active');
+
+  // Re-render charts when tab becomes visible
+  if (tabName === 'level2') {
+    setTimeout(() => { drawL2TrendChart(); drawL2DonutChart(); }, 50);
+  } else if (tabName === 'level3') {
+    setTimeout(() => { renderL3BarChart(); drawL3DonutChart(); }, 50);
+  }
+}
+
+// ===== Dashboard Rendering =====
+function renderAllDashboards() {
+  renderL2Kpis();
+  renderL2Table();
+  renderL3Kpis();
+  renderL3Table();
+  renderDeptTree();
+}
+
+function renderL2Kpis() {
+  const data = DEPT_DATA.level2;
+  const totalCount = data.reduce((s, d) => s + d.count, 0);
+  const avgPerf = Math.round(data.reduce((s, d) => s + d.perf, 0) / data.length);
+  const avgBudget = Math.round(data.reduce((s, d) => s + d.budget, 0) / data.length);
+  const greenCount = data.filter(d => d.status === 'green').length;
+
+  document.getElementById('l2Kpis').innerHTML = `
+    ${kpiCard('二级部门总数', data.length, '个', '#4f7cff', '#4f7cff20', '趋势平稳')}
+    ${kpiCard('总人数', totalCount, '人', '#22c55e', '#22c55e20', '+12 较上月')}
+    ${kpiCard('平均绩效', avgPerf + '%', '', '#f59e0b', '#f59e0b20', '+3.2% 较上月')}
+    ${kpiCard('健康部门', greenCount + '/' + data.length, '', '#14b8a6', '#14b8a620', '运行良好')}
+  `;
+}
+
+function kpiCard(label, value, unit, color, bgColor, change) {
+  return `
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:${bgColor};color:${color};">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+      </div>
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value" style="color:${color};">${value}<span style="font-size:14px;color:var(--text-secondary);margin-left:4px;">${unit}</span></div>
+      <div class="kpi-change up">${change}</div>
+    </div>
+  `;
+}
+
+function renderL2Table() {
+  const tbody = document.getElementById('l2TableBody');
+  tbody.innerHTML = DEPT_DATA.level2.map(d => `
+    <tr>
+      <td style="font-weight:500;">${d.name}</td>
+      <td>${d.head}</td>
+      <td>${d.count}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:60px;height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;">
+            <div style="width:${d.perf}%;height:100%;background:${d.perf>=85?'var(--success)':d.perf>=75?'var(--warning)':'var(--danger)'};border-radius:3px;"></div>
+          </div>
+          ${d.perf}%
+        </div>
+      </td>
+      <td>${d.budget}%</td>
+      <td><span class="status-tag ${d.status}">${d.status==='green'?'正常':d.status==='yellow'?'关注':'预警'}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderL3Kpis() {
+  const data = DEPT_DATA.level3;
+  const totalTasks = data.reduce((s, d) => s + d.tasks, 0);
+  const avgCompletion = Math.round(data.reduce((s, d) => s + d.completion, 0) / data.length);
+  const completedTasks = Math.round(data.reduce((s, d) => s + d.tasks * d.completion / 100, 0));
+  const warningCount = data.filter(d => d.status !== 'green').length;
+
+  document.getElementById('l3Kpis').innerHTML = `
+    ${kpiCard('三级部门总数', data.length, '个', '#a855f7', '#a855f720', '组织完善')}
+    ${kpiCard('任务总数', totalTasks, '项', '#4f7cff', '#4f7cff20', '+8 较上周')}
+    ${kpiCard('平均完成率', avgCompletion + '%', '', '#22c55e', '#22c55e20', '+1.5% 较上周')}
+    ${kpiCard('需关注部门', warningCount, '个', '#ef4444', '#ef444420', '需跟进')}
+  `;
+}
+
+function renderL3Table() {
+  const tbody = document.getElementById('l3TableBody');
+  tbody.innerHTML = DEPT_DATA.level3.map(d => `
+    <tr>
+      <td style="font-weight:500;">${d.name}</td>
+      <td>${d.parent}</td>
+      <td>${d.head}</td>
+      <td>${d.tasks}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:60px;height:6px;background:var(--bg-secondary);border-radius:3px;overflow:hidden;">
+            <div style="width:${d.completion}%;height:100%;background:${d.completion>=85?'var(--success)':d.completion>=75?'var(--warning)':'var(--danger)'};border-radius:3px;"></div>
+          </div>
+          ${d.completion}%
+        </div>
+      </td>
+      <td><span class="status-tag ${d.status}">${d.status==='green'?'正常':d.status==='yellow'?'关注':'预警'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ===== Charts =====
+function drawL2TrendChart() {
+  const canvas = document.getElementById('l2TrendChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const months = ['1月','2月','3月','4月','5月','6月'];
+  const datasets = [
+    { name: '研发中心', color: '#4f7cff', data: [82,85,88,86,90,92] },
+    { name: '产品中心', color: '#a855f7', data: [75,78,80,83,82,85] },
+    { name: '运营中心', color: '#14b8a6', data: [80,82,85,84,87,88] },
+  ];
+
+  const padL = 40, padR = 20, padT = 20, padB = 30;
+  const chartW = W - padL - padR, chartH = H - padT - padB;
+
+  // Grid
+  ctx.strokeStyle = '#2d3148';
+  ctx.lineWidth = 1;
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#5a5e7a';
+  for (let i = 0; i <= 5; i++) {
+    const y = padT + (chartH / 5) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
+    ctx.textAlign = 'right';
+    ctx.fillText((100 - i * 20) + '%', padL - 6, y + 3);
+  }
+
+  // X labels
+  ctx.textAlign = 'center';
+  months.forEach((m, i) => {
+    const x = padL + (chartW / (months.length - 1)) * i;
+    ctx.fillText(m, x, H - 10);
+  });
+
+  // Lines
+  datasets.forEach(ds => {
+    ctx.strokeStyle = ds.color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ds.data.forEach((v, i) => {
+      const x = padL + (chartW / (months.length - 1)) * i;
+      const y = padT + chartH * (1 - v / 100);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Points
+    ds.data.forEach((v, i) => {
+      const x = padL + (chartW / (months.length - 1)) * i;
+      const y = padT + chartH * (1 - v / 100);
+      ctx.fillStyle = ds.color;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    });
+  });
+
+  // Legend
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'left';
+  let lx = padL;
+  datasets.forEach(ds => {
+    ctx.fillStyle = ds.color;
+    ctx.fillRect(lx, 4, 10, 10);
+    ctx.fillStyle = '#8b8fa8';
+    ctx.fillText(ds.name, lx + 14, 13);
+    lx += ctx.measureText(ds.name).width + 40;
+  });
+}
+
+function drawDonut(canvasId, data, centerNumId, legendId, centerLabel) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H / 2;
+  const outerR = Math.min(W, H) / 2 - 8;
+  const innerR = outerR * 0.62;
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  let startAngle = -Math.PI / 2;
+  data.forEach(d => {
+    const angle = (d.value / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startAngle, startAngle + angle);
+    ctx.arc(cx, cy, innerR, startAngle + angle, startAngle, true);
+    ctx.closePath();
+    ctx.fillStyle = d.color;
+    ctx.fill();
+    startAngle += angle;
+  });
+
+  const legend = document.getElementById(legendId);
+  if (legend) {
+    legend.innerHTML = data.map(d => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${d.color};"></div>
+        <span>${d.name}</span>
+        <span style="color:var(--text-muted);margin-left:auto;">${d.value}${d.unit||''}</span>
+      </div>
+    `).join('');
+  }
+
+  const numEl = document.getElementById(centerNumId);
+  if (numEl) numEl.textContent = centerLabel || total;
+}
+
+function drawL2DonutChart() {
+  const data = DEPT_DATA.level2.map((d, i) => ({
+    name: d.name,
+    value: d.count,
+    color: ['#4f7cff','#a855f7','#14b8a6','#f59e0b','#ef4444','#22c55e'][i % 6],
+    unit: '人'
+  }));
+  drawDonut('l2DonutChart', data, 'l2DonutNum', 'l2DonutLegend', data.reduce((s,d)=>s+d.value,0) + '人');
+}
+
+function renderL3BarChart() {
+  const container = document.getElementById('l3BarChart');
+  if (!container) return;
+  const maxTasks = Math.max(...DEPT_DATA.level3.map(d => d.tasks));
+
+  container.innerHTML = DEPT_DATA.level3.map(d => {
+    const widthPct = (d.tasks / maxTasks) * 100;
+    const color = d.completion >= 85 ? '#22c55e' : d.completion >= 75 ? '#f59e0b' : '#ef4444';
+    return `
+      <div class="bar-item">
+        <div class="bar-label">${d.name}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${widthPct}%;background:${color};">${d.tasks}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function drawL3DonutChart() {
+  const data = DEPT_DATA.level3.reduce((acc, d) => {
+    const completed = Math.round(d.tasks * d.completion / 100);
+    const remaining = d.tasks - completed;
+    acc[0].value += completed;
+    acc[1].value += remaining;
+    return acc;
+  }, [
+    { name: '已完成', value: 0, color: '#22c55e' },
+    { name: '未完成', value: 0, color: '#3d4263' },
+  ]);
+  const total = data.reduce((s, d) => s + d.value, 0);
+  drawDonut('l3DonutChart', data, 'l3DonutNum', 'l3DonutLegend', total);
+}
+
+// ===== Department Tree =====
+function renderDeptTree() {
+  const container = document.getElementById('deptTree');
+  if (!container) return;
+
+  const tree = DEPT_DATA.level2.map(l2 => {
+    const children = DEPT_DATA.level3.filter(l3 => l3.parent === l2.name);
+    return `
+      <div class="dept-node">
+        <div class="dept-node-header" onclick="toggleDeptNode(this)">
+          <span class="dept-toggle">&#9654;</span>
+          <span class="dept-name">${l2.name}</span>
+          <span class="dept-level-tag l2">L2</span>
+          <span class="dept-count">${l2.count}人 · ${children.length}个子部门</span>
+        </div>
+        <div class="dept-children">
+          ${children.map(c => `
+            <div class="dept-node">
+              <div class="dept-node-header">
+                <span class="dept-toggle" style="visibility:hidden;">&#9654;</span>
+                <span class="dept-name">${c.name}</span>
+                <span class="dept-level-tag l3">L3</span>
+                <span class="dept-count">${c.tasks}项任务 · 完成${c.completion}%</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = tree;
+}
+
+function toggleDeptNode(header) {
+  const toggle = header.querySelector('.dept-toggle');
+  const children = header.nextElementSibling;
+  if (toggle && children) {
+    toggle.classList.toggle('open');
+    children.classList.toggle('open');
+  }
+}
+
+// ===== Settings Modal =====
+function openSettings() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  renderPermLists();
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+
+function renderPermLists() {
+  ['admins', 'l2', 'l3'].forEach(level => {
+    const container = document.getElementById(`${level}PermList`);
+    if (!container) return;
+    const users = permissions[level] || [];
+    if (users.length === 0) {
+      container.innerHTML = '<span class="perm-empty">暂无配置人员，请添加</span>';
+    } else {
+      container.innerHTML = users.map(name => `
+        <div class="perm-user-chip">
+          <span>${name}</span>
+          <span class="remove-btn" onclick="removePermUser('${level}', '${name}')">&times;</span>
+        </div>
+      `).join('');
+    }
+  });
+}
+
+function addPermUser(level) {
+  const input = document.getElementById(`${level}PermInput`);
+  const name = input.value.trim();
+  if (!name) return;
+  if (!permissions[level]) permissions[level] = [];
+  if (permissions[level].includes(name)) {
+    input.value = '';
+    return;
+  }
+  permissions[level].push(name);
+  savePermissions(permissions);
+  input.value = '';
+  renderPermLists();
+
+  // Update current user permissions if they match
+  if (currentUser && currentUser.name === name) {
+    if (level === 'admins') {
+      currentUser.isAdmin = true;
+      currentUser.hasL2 = true;
+      currentUser.hasL3 = true;
+    }
+    if (level === 'l2') currentUser.hasL2 = true;
+    if (level === 'l3') currentUser.hasL3 = true;
+    showApp();
+  }
+
+  // Update tab accessibility for current user
+  if (currentUser) {
+    updateTabAccess();
+  }
+}
+
+function removePermUser(level, name) {
+  permissions[level] = permissions[level].filter(n => n !== name);
+  savePermissions(permissions);
+  renderPermLists();
+
+  // Update current user if their permission was removed
+  if (currentUser && currentUser.name === name) {
+    if (level === 'admins') {
+      currentUser.isAdmin = false;
+      // Re-check actual permissions after removing admin
+      currentUser.hasL2 = permissions.l2.includes(name);
+      currentUser.hasL3 = permissions.l3.includes(name);
+    } else if (level === 'l2' && !currentUser.isAdmin) {
+      currentUser.hasL2 = false;
+    } else if (level === 'l3' && !currentUser.isAdmin) {
+      currentUser.hasL3 = false;
+    }
+    if (!currentUser.hasL2 && !currentUser.hasL3) {
+      handleLogout();
+    } else {
+      showApp();
+      updateTabAccess();
+    }
+  }
+}
+
+function updateTabAccess() {
+  const l2Tab = document.querySelector('.tab[data-tab="level2"]');
+  const l3Tab = document.querySelector('.tab[data-tab="level3"]');
+
+  if (!currentUser.hasL2) {
+    l2Tab.classList.add('disabled');
+    l2Tab.innerHTML = '二级部门看板 <span class="lock-icon">🔒</span>';
+    if (l2Tab.classList.contains('active')) {
+      l2Tab.classList.remove('active');
+      document.getElementById('panel-level2').classList.remove('active');
+      if (currentUser.hasL3) {
+        switchTab('level3');
+      }
+    }
+  } else {
+    l2Tab.classList.remove('disabled');
+    l2Tab.innerHTML = '二级部门看板 <span class="tab-badge">L1</span>';
+  }
+
+  if (!currentUser.hasL3) {
+    l3Tab.classList.add('disabled');
+    l3Tab.innerHTML = '三级部门看板 <span class="lock-icon">🔒</span>';
+    if (l3Tab.classList.contains('active')) {
+      l3Tab.classList.remove('active');
+      document.getElementById('panel-level3').classList.remove('active');
+      if (currentUser.hasL2) {
+        switchTab('level2');
+      }
+    }
+  } else {
+    l3Tab.classList.remove('disabled');
+    l3Tab.innerHTML = '三级部门看板 <span class="tab-badge">L2</span>';
+  }
+}
+
+// ===== Init =====
+window.addEventListener('DOMContentLoaded', () => {
+  // Check if user was previously logged in
+  const savedUser = sessionStorage.getItem(SESSION_KEY);
+  if (savedUser) {
+    const isAdmin = permissions.admins.includes(savedUser);
+    const hasL2 = isAdmin || permissions.l2.includes(savedUser);
+    const hasL3 = isAdmin || permissions.l3.includes(savedUser);
+    if (hasL2 || hasL3) {
+      currentUser = { name: savedUser, isAdmin, hasL2, hasL3 };
+      showApp();
+      return;
+    }
+  }
+
+  // Show login
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginName').focus();
+
+  // Enter key on login
+  document.getElementById('loginName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleLogin();
+  });
+});
+
+// Close modal on overlay click
+document.getElementById('settingsModal').addEventListener('click', (e) => {
+  if (e.target.id === 'settingsModal') closeSettings();
+});
+</script>
+</body>
+</html>
