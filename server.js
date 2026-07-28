@@ -18,8 +18,50 @@ function readDB() {
     const raw = fs.readFileSync(DB_FILE, 'utf-8');
     return JSON.parse(raw);
   } catch (e) {
-    return { version: 0, lastModified: null, lastModifiedBy: '', stores: {} };
+    return null;
   }
+}
+
+// 默认权限与部门数据，防止首次启动时所有人无法登录
+const DEFAULT_STORES = {
+  perf_dashboard_depts: [
+    '集成维护架构设计组',
+    '集成项目管理部',
+    '底软集成开发部',
+    '系统集成开发部',
+    '三方应用集成开发部'
+  ],
+  perf_dashboard_permissions: {
+    admins: ['夏国晋', '剡飞龙'],
+    l1: ['剡飞龙', '朱海涛'],
+    deptAdmins: {
+      '集成维护架构设计组': ['游珂'],
+      '集成项目管理部': ['涂良建'],
+      '底软集成开发部': ['殷顺卿'],
+      '系统集成开发部': ['刘斐骢'],
+      '三方应用集成开发部': ['刘斐骢']
+    },
+    l2: {
+      '集成维护架构设计组': ['游珂'],
+      '集成项目管理部': ['涂良建'],
+      '底软集成开发部': ['殷顺卿'],
+      '系统集成开发部': ['刘斐骢'],
+      '三方应用集成开发部': ['刘斐骢']
+    }
+  }
+};
+
+function getDB() {
+  const state = readDB();
+  if (state && state.stores && Object.keys(state.stores).length > 0) {
+    return state;
+  }
+  return {
+    version: 0,
+    lastModified: null,
+    lastModifiedBy: 'system',
+    stores: DEFAULT_STORES
+  };
 }
 
 function writeDB(state) {
@@ -97,7 +139,7 @@ const server = http.createServer(async (req, res) => {
 
   // ---- API: 获取全量状态 ----
   if (url === '/api/state' && req.method === 'GET') {
-    const state = readDB();
+    const state = getDB();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(state));
     return;
@@ -111,9 +153,17 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ error: 'Invalid body, "stores" required' }));
       return;
     }
-    const current = readDB();
+    // 保护：不允许空 stores 覆盖已有数据（防止误清空）
+    const current = getDB();
+    const hasExisting = current.stores && Object.keys(current.stores).length > 0;
+    const isEmptyNew = Object.keys(body.stores).length === 0;
+    if (hasExisting && isEmptyNew) {
+      res.writeHead(409, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Refusing to overwrite existing data with empty stores' }));
+      return;
+    }
     const newState = {
-      version: current.version + 1,
+      version: (current.version || 0) + 1,
       lastModified: new Date().toISOString(),
       lastModifiedBy: body.user || 'anonymous',
       stores: body.stores,

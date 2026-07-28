@@ -5932,39 +5932,59 @@ function buildCurrentUser(name) {
 }
 
 function handleLogin() {
-  const name = document.getElementById('loginName').value.trim();
+  const nameEl = document.getElementById('loginName');
   const errEl = document.getElementById('loginError');
-  errEl.textContent = '';
-  if (!name) { errEl.textContent = '请输入姓名'; return; }
+
+  if (!nameEl) { console.error('[Login] loginName element not found'); alert('页面加载异常，请刷新重试'); return; }
+  const name = nameEl.value.trim();
+
+  if (errEl) errEl.textContent = '';
+  if (!name) { if (errEl) errEl.textContent = '请输入姓名'; return; }
+
+  console.log('[Login] Attempting login for:', name);
+
+  // Ensure allDepts is valid
+  if (!allDepts || allDepts.length === 0) {
+    allDepts = [...DEFAULT_DEPTS];
+    saveDepts(allDepts);
+  }
+
+  // Ensure perms is valid
+  if (!perms || typeof perms !== 'object' || !Array.isArray(perms.admins) || perms.admins.length === 0) {
+    console.log('[Login] Perms invalid, resetting to defaults');
+    perms = getDefaultPerms();
+  }
 
   try {
     currentUser = buildCurrentUser(name);
   } catch(e) {
-    console.error('buildCurrentUser error:', e);
-    // Safety: if buildCurrentUser throws, rebuild from defaults
+    console.error('[Login] buildCurrentUser error:', e);
     perms = getDefaultPerms();
-    savePerms(perms);
-    currentUser = buildCurrentUser(name);
+    try { savePerms(perms); } catch(e2) {}
+    try { currentUser = buildCurrentUser(name); } catch(e2) {
+      console.error('[Login] Recovery failed:', e2);
+      if (errEl) errEl.textContent = '系统初始化异常，请点击下方"重置权限"后重试';
+      return;
+    }
   }
 
-  if (!currentUser.hasL1 && !currentUser.hasL2 && !currentUser.isDeptAdmin) {
-    const hint = (perms.admins && perms.admins.length > 0)
-      ? '管理员：' + perms.admins.join('、')
-      : '请联系管理员添加您的姓名';
-    errEl.textContent = '您没有访问权限，' + hint;
+  console.log('[Login] User built:', JSON.stringify({name: currentUser.name, isAdmin: currentUser.isAdmin, hasL1: currentUser.hasL1, hasL2: currentUser.hasL2, isDeptAdmin: currentUser.isDeptAdmin, dept: currentUser.dept}));
+
+  if (!currentUser || (!currentUser.hasL1 && !currentUser.hasL2 && !currentUser.isDeptAdmin && !currentUser.isAdmin)) {
+    const validUsers = [];
+    if (perms.admins) validUsers.push('管理员：' + perms.admins.join('、'));
+    if (errEl) errEl.textContent = '您没有访问权限。' + (validUsers.length > 0 ? validUsers.join('；') : '请联系管理员添加您的姓名');
     return;
   }
 
-  sessionStorage.setItem(SESSION_KEY, name);
+  try { sessionStorage.setItem(SESSION_KEY, name); } catch(e) {}
 
-  // Reload data for correct department context
-  try {
-    reloadDataForCurrentUser();
-  } catch(e) {
-    console.error('reloadDataForCurrentUser error:', e);
+  try { reloadDataForCurrentUser(); } catch(e) { console.error('[Login] reloadDataForCurrentUser error:', e); }
+
+  try { showApp(); } catch(e) {
+    console.error('[Login] showApp error:', e);
+    if (errEl) errEl.textContent = '页面加载失败，请刷新重试';
   }
-
-  showApp();
 }
 
 function handleLogout() {
@@ -6993,20 +7013,44 @@ function startSyncPoll() {
 
 // ========== INIT ==========
 async function init() {
-  // 1. 优先从服务端加载最新数据
-  const fromServer = await loadFromServer();
+  console.log('[Init] Starting...');
 
-  // 2. 重新初始化全局变量（loadFromServer 已更新 localStorage）
-  if (fromServer) {
-    try { allData = loadData(); } catch(e) {}
-    try { allDepts = loadDepts(); } catch(e) {}
-    try { weeklyData = loadWeekly(); } catch(e) {}
-    try { allSubtasks = loadSubtasks(); } catch(e) {}
-    try { perms = loadPerms(); } catch(e) {}
+  // 1. 优先从服务端加载最新数据
+  let fromServer = false;
+  try {
+    fromServer = await loadFromServer();
+  } catch(e) {
+    console.warn('[Init] Server loading failed:', e.message);
   }
 
-  // 3. 启动同步轮询
-  startSyncPoll();
+  // 2. 重新初始化全局变量
+  if (fromServer) {
+    try { allData = loadData(); } catch(e) { console.error('[Init] loadData:', e); }
+    try { allDepts = loadDepts(); } catch(e) { console.error('[Init] loadDepts:', e); }
+    try { weeklyData = loadWeekly(); } catch(e) { console.error('[Init] loadWeekly:', e); }
+    try { allSubtasks = loadSubtasks(); } catch(e) { console.error('[Init] loadSubtasks:', e); }
+    try { perms = loadPerms(); } catch(e) { console.error('[Init] loadPerms:', e); }
+  }
+
+  // 3. 安全兜底：确保 perms 有效并持久化到 localStorage
+  if (!perms || typeof perms !== 'object' || !Array.isArray(perms.admins) || perms.admins.length === 0) {
+    console.log('[Init] Perms invalid, using defaults');
+    perms = getDefaultPerms();
+    try { savePerms(perms); } catch(e) { console.error('[Init] savePerms error:', e); }
+  }
+  console.log('[Init] Perms loaded, admins:', perms.admins);
+
+  // 确保关键数据已初始化（静态托管环境无服务端时 fromServer=false，需强制加载）
+  if (!fromServer) {
+    try { allData = loadData(); } catch(e) { allData = []; }
+    try { allDepts = loadDepts(); } catch(e) { allDepts = [...DEFAULT_DEPTS]; }
+    try { weeklyData = loadWeekly(); } catch(e) { weeklyData = {}; }
+    try { allSubtasks = loadSubtasks(); } catch(e) { allSubtasks = {}; }
+    console.log('[Init] Local data loaded: data=' + allData.length + ', depts=' + allDepts.length);
+  }
+
+  // 4. 启动同步轮询（静默失败不影响登录）
+  try { startSyncPoll(); } catch(e) { console.warn('[Init] syncPoll skipped:', e.message); }
 
   // Check if user was previously logged in (same session)
   const savedUser = sessionStorage.getItem(SESSION_KEY);
@@ -7014,29 +7058,32 @@ async function init() {
     try {
       currentUser = buildCurrentUser(savedUser);
     } catch(e) {
-      console.error('init buildCurrentUser error:', e);
+      console.error('[Init] buildCurrentUser error:', e);
       perms = getDefaultPerms();
       savePerms(perms);
-      currentUser = buildCurrentUser(savedUser);
+      try { currentUser = buildCurrentUser(savedUser); } catch(e2) {}
     }
-    if (currentUser.hasL1 || currentUser.hasL2 || currentUser.isDeptAdmin || currentUser.isAdmin) {
-      try { reloadDataForCurrentUser(); } catch(e) { console.error('init reloadData error:', e); }
-      try { showApp(); } catch(e) { console.error('init showApp error:', e); }
+    if (currentUser && (currentUser.hasL1 || currentUser.hasL2 || currentUser.isDeptAdmin || currentUser.isAdmin)) {
+      try { reloadDataForCurrentUser(); } catch(e) { console.error('[Init] reloadData:', e); }
+      try { showApp(); } catch(e) { console.error('[Init] showApp:', e); }
       return;
     }
   }
 
   // Show login screen
-  document.getElementById('loginOverlay').classList.remove('hidden');
-  document.getElementById('loginName').focus();
+  try {
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) overlay.classList.remove('hidden');
+    const nameInput = document.getElementById('loginName');
+    if (nameInput) nameInput.focus();
+  } catch(e) { console.error('[Init] login screen:', e); }
 
-  // Pre-render data in background (charts will init after login)
-  // Each render wrapped individually so one failure doesn't block others
-  try { renderCockpitCards(); } catch(e) { console.error('renderCockpitCards:', e); }
-  try { renderRankingTable(); } catch(e) { console.error('renderRankingTable:', e); }
-  try { renderKPITable(); } catch(e) { console.error('renderKPITable:', e); }
-  try { renderTasks(); } catch(e) { console.error('renderTasks:', e); }
-  try { renderBonus(); } catch(e) { console.error('renderBonus:', e); }
+  // Pre-render data in background
+  try { renderCockpitCards(); } catch(e) { console.error('[Init] renderCockpitCards:', e); }
+  try { renderRankingTable(); } catch(e) { console.error('[Init] renderRankingTable:', e); }
+  try { renderKPITable(); } catch(e) { console.error('[Init] renderKPITable:', e); }
+  try { renderTasks(); } catch(e) { console.error('[Init] renderTasks:', e); }
+  try { renderBonus(); } catch(e) { console.error('[Init] renderBonus:', e); }
 }
 
 init();
