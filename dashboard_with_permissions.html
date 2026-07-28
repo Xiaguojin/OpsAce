@@ -877,7 +877,7 @@ body {
 .kpi-th-trend { width:50px; }
 .kpi-th-status { width:90px; }
 .kpi-th-spark { width:110px; }
-.kpi-th-risk { width:70px; }
+.kpi-th-risk { width:150px; }
 .kpi-th-action { width:60px; }
 
 /* KPI editable inputs */
@@ -965,7 +965,25 @@ body {
 .kpi-trend.down { color:var(--c-red); }
 .kpi-trend.flat { color:var(--c-text-3); }
 
-/* Risk description tooltip */
+/* Risk description + process records */
+.kpi-risk-cell { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+.kpi-risk-desc {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 8px; border-radius:12px; font-size:11px; font-weight:500;
+  background:var(--c-orange-lt); color:var(--c-orange);
+  max-width:100%; cursor:pointer;
+}
+.kpi-risk-desc .risk-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
+.kpi-risk-desc:hover { background:rgba(245,158,11,0.2); }
+.kpi-risk-records {
+  display:inline-flex; align-items:center; gap:3px;
+  font-size:10px; color:var(--c-text-2); cursor:pointer;
+}
+.kpi-risk-records .record-dot { width:5px; height:5px; border-radius:50%; background:var(--c-orange); }
+.kpi-risk-records:hover { color:var(--c-primary); }
+.kpi-risk-empty { color:var(--c-text-3); font-size:12px; }
+
+/* Risk description tooltip (legacy hover) */
 .kpi-risk-tip {
   position:relative; display:inline-block;
   color:var(--c-orange); font-size:12px; cursor:help;
@@ -980,6 +998,19 @@ body {
   line-height:1.5; box-shadow:0 4px 12px rgba(0,0,0,0.3);
 }
 .kpi-risk-tip:hover::after { opacity:1; }
+
+/* Risk process records section */
+.risk-records-section { margin-top:16px; border-top:1px solid var(--c-border); padding-top:12px; }
+.risk-records-section h4 { font-size:14px; margin-bottom:8px; color:var(--c-orange); }
+.risk-record-item {
+  display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--c-border);
+  font-size:12px; line-height:1.5;
+}
+.risk-record-item:last-child { border-bottom:none; }
+.risk-record-meta { min-width:120px; color:var(--c-text-3); flex-shrink:0; }
+.risk-record-user { color:var(--c-primary); font-weight:600; }
+.risk-record-action { color:var(--c-text); flex:1; }
+.risk-record-empty { color:var(--c-text-3); font-size:12px; padding:8px 0; }
 
 /* KPI filter bar */
 .kpi-filter-bar {
@@ -1038,18 +1069,25 @@ body {
 .kpi-table td .cell-tooltip { max-width:140px; overflow:hidden; text-overflow:ellipsis; display:block; }
 
 /* Support tasks list in cell */
-.kpi-support-list { display:flex; flex-direction:column; gap:4px; }
+.kpi-support-list { display:flex; flex-direction:column; gap:5px; }
 .kpi-support-item {
-  display:grid; grid-template-columns:1fr 40px 34px; gap:6px; align-items:center;
+  display:flex; align-items:center; gap:6px;
   font-size:11px; color:var(--c-text-2);
+  padding:4px 6px; border-radius:6px;
+  background:var(--c-surface-2);
+  border:1px solid var(--c-border);
 }
-.kpi-support-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.kpi-support-bar { height:5px; background:var(--c-border); border-radius:3px; overflow:hidden; }
-.kpi-support-fill { height:100%; border-radius:3px; }
+.kpi-support-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.kpi-support-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; color:var(--c-text); }
+.kpi-support-bar { height:4px; background:var(--c-border); border-radius:2px; overflow:hidden; }
+.kpi-support-fill { height:100%; border-radius:2px; }
 .kpi-support-fill.green { background:var(--c-green); }
 .kpi-support-fill.orange { background:var(--c-orange); }
 .kpi-support-fill.red { background:var(--c-red); }
-.kpi-support-pct { text-align:right; font-variant-numeric:tabular-nums; }
+.kpi-support-pct { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; font-weight:600; }
+.kpi-support-pct.green { color:var(--c-green); }
+.kpi-support-pct.orange { color:var(--c-orange); }
+.kpi-support-pct.red { color:var(--c-red); }
 
 /* Sparkline in cell */
 .kpi-sparkline { display:block; width:100%; height:24px; }
@@ -2363,11 +2401,30 @@ body {
 
         <!-- Current amounts & risk for KPI -->
         <div id="fm-amounts" style="margin-top:16px;">
-          <h4 style="font-size:13px;color:var(--c-text-2);margin-bottom:10px;">📊 当前完成值与风险信息</h4>
+          <h4 style="font-size:13px;color:var(--c-text-2);margin-bottom:10px;">📊 当前完成值、状态与风险信息</h4>
           <div class="form-row triple">
             <div class="form-group"><label>已完成数值</label><input type="number" id="fm-completed" step="any" placeholder="实际已完成数值"></div>
             <div class="form-group"><label>目标数值</label><input type="number" id="fm-target" step="any" placeholder="年度目标数值"></div>
             <div class="form-group"><label>当前进度（自动计算）</label><input type="text" id="fm-progress-display" readonly placeholder="保存后自动计算"></div>
+          </div>
+          <div class="form-row triple">
+            <div class="form-group">
+              <label>状态灯</label>
+              <select id="fm-status">
+                <option value="">自动（按进度计算）</option>
+                <option value="normal">🟢 正常</option>
+                <option value="warning">🟡 预警</option>
+                <option value="danger">🔴 滞后</option>
+              </select>
+            </div>
+            <div class="form-group"><label>环比趋势</label>
+              <select id="fm-trend">
+                <option value="up">↑ 向好</option>
+                <option value="flat" selected>→ 持平</option>
+                <option value="down">↓ 变差</option>
+              </select>
+            </div>
+            <div class="form-group"></div>
           </div>
           <div class="form-row full">
             <div class="form-group"><label>偏差记录</label><textarea id="fm-deviation" rows="2" placeholder="记录当前偏差原因、影响范围等"></textarea></div>
@@ -3842,9 +3899,11 @@ function renderKPISupportTasks(kpi) {
       const color = p >= 80 ? 'green' : p >= 50 ? 'orange' : 'red';
       const statusText = summary.total === 0 ? '未拆解' : `${summary.completed}/${summary.total}项`;
       return `<div class="kpi-support-item" title="${t.title}：${summary.total}项子任务，完成${summary.completed}项，平均进度${p}%">
-        <span class="kpi-support-name">${t.title}</span>
-        <div class="kpi-support-bar"><div class="kpi-support-fill ${color}" style="width:${p}%"></div></div>
-        <span class="kpi-support-pct">${statusText}</span>
+        <div class="kpi-support-main">
+          <span class="kpi-support-name">${t.title}</span>
+          <div class="kpi-support-bar"><div class="kpi-support-fill ${color}" style="width:${p}%"></div></div>
+        </div>
+        <span class="kpi-support-pct ${color}">${statusText}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -3899,6 +3958,41 @@ function renderKPISparkline(kpi) {
     <polyline points="${pts}" stroke="${colorVar}"/>
     ${circles}
   </svg>`;
+}
+
+function getRiskRecords(kpiId) {
+  const riskActions = ['更新偏差记录', '更新风险提示', '更新风险求助', '修改状态'];
+  return loadChangeLog().filter(e => e.kpiId === kpiId && riskActions.indexOf(e.action) !== -1);
+}
+
+function renderKPIRiskCell(kpi) {
+  const riskDesc = kpi.riskDesc || '';
+  const riskHelp = kpi.riskHelp || '';
+  const deviation = kpi.deviation || '';
+  if (!riskDesc && !riskHelp && !deviation) {
+    return '<span class="kpi-risk-empty">-</span>';
+  }
+  const displayText = riskDesc || deviation || riskHelp;
+  const tipText = [
+    riskDesc ? '风险：' + riskDesc : '',
+    deviation ? '偏差：' + deviation : '',
+    riskHelp ? '求助：' + riskHelp : ''
+  ].filter(Boolean).join('\n');
+  const records = getRiskRecords(kpi.id);
+  const recordsHtml = records.length > 0
+    ? `<span class="kpi-risk-records" onclick="event.stopPropagation();showKPIDetail('${kpi.id}','risk')" title="查看${records.length}条风险处理记录">
+         <span class="record-dot"></span> ${records.length}条记录
+       </span>`
+    : `<span class="kpi-risk-records" onclick="event.stopPropagation();showKPIDetail('${kpi.id}','risk')" title="暂无处理记录，点击查看详情">
+         <span class="record-dot" style="background:var(--c-text-3);"></span> 暂无记录
+       </span>`;
+  return `<div class="kpi-risk-cell">
+    <span class="kpi-risk-desc" onclick="event.stopPropagation();showKPIDetail('${kpi.id}','risk')" title="${tipText.replace(/"/g,'&quot;')}">
+      <span>⚠️</span>
+      <span class="risk-text">${displayText}</span>
+    </span>
+    ${recordsHtml}
+  </div>`;
 }
 
 function renderKPITable(filter = '') {
@@ -3969,16 +4063,7 @@ function renderKPITable(filter = '') {
       const supportHtml = renderKPISupportTasks(k);
       const sparkHtml = renderKPISparkline(k);
 
-      const statusCell = canEdit
-        ? `<div class="kpi-status-wrap ${status}">
-             <select class="kpi-status-select ${status}" onclick="event.stopPropagation();" onchange="event.stopPropagation();updateKPIStatus('${k.id}', this.value)">
-               <option value="" ${!k.status?'selected':''}>自动（按进度）</option>
-               <option value="normal" ${status==='normal'?'selected':''}>正常</option>
-               <option value="warning" ${status==='warning'?'selected':''}>预警</option>
-               <option value="danger" ${status==='danger'?'selected':''}>滞后</option>
-             </select>
-           </div>`
-        : `<span class="kpi-status-badge ${status}"><span class="badge-dot"></span>${statusLabels[status]}</span>`;
+      const statusCell = `<span class="kpi-status-badge ${status}"><span class="badge-dot"></span>${statusLabels[status]}</span>`;
 
       return `
       <tr>
@@ -4008,7 +4093,7 @@ function renderKPITable(filter = '') {
         <td class="kpi-td-trend">${getTrendIcon(trend)}</td>
         <td class="kpi-td-status">${statusCell}</td>
         <td class="kpi-td-spark">${sparkHtml}</td>
-        <td class="kpi-td-risk">${riskDesc || riskHelp ? `<span class="kpi-risk-tip" data-tip="${(riskDesc + (riskHelp ? '\n求助：' + riskHelp : '')).replace(/"/g,'&quot;')}">⚠️ ${riskHelp ? '有风险/求助' : '有风险'}</span>` : '<span style="color:var(--c-text-3);">-</span>'}</td>
+        <td class="kpi-td-risk">${renderKPIRiskCell(k)}</td>
         <td class="kpi-td-action" onclick="event.stopPropagation();">
           ${canEdit ? `
           <div class="kpi-action-btns">
@@ -4807,7 +4892,7 @@ function renderSubTaskTable() {
 }
 
 // ========== MODAL DETAILS ==========
-function showKPIDetail(id) {
+function showKPIDetail(id, section) {
   const k = allData.find(d => d.id === id);
   if (!k) return;
   document.getElementById('modal-title').textContent = k.title;
@@ -4851,6 +4936,32 @@ function showKPIDetail(id) {
     </div>`;
   }
 
+  // Build risk process records HTML
+  const riskRecords = getRiskRecords(id);
+  let riskRecordsHtml = '';
+  if (riskRecords.length > 0) {
+    riskRecordsHtml = `
+    <div class="risk-records-section" id="kpi-risk-records-section">
+      <h4>🛡️ 风险处理过程记录</h4>
+      <div class="changelog-list">
+        ${riskRecords.map(e => `
+          <div class="risk-record-item">
+            <div class="risk-record-meta">${e.time}</div>
+            <div>
+              <span class="risk-record-user">${e.user}</span>
+              <span class="risk-record-action">${e.action}：${e.oldVal} → ${e.newVal}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  } else if (k.riskDesc || k.riskHelp || k.deviation) {
+    riskRecordsHtml = `
+    <div class="risk-records-section" id="kpi-risk-records-section">
+      <h4>🛡️ 风险处理过程记录</h4>
+      <div class="risk-record-empty">暂无处理记录，编辑指标时可更新偏差/风险/求助信息并自动生成记录。</div>
+    </div>`;
+  }
+
   document.getElementById('modal-body').innerHTML = `
     <h4>基本信息</h4>
     <div class="info-row"><div class="info-label">所属维度</div><div class="info-value">${k.category||'-'}</div></div>
@@ -4870,9 +4981,16 @@ function showKPIDetail(id) {
     <h4>指标定义与核算公式</h4>
     <div class="desc-box">${k.desc||'暂无详细说明'}</div>
     ${targetsHtml}
+    ${riskRecordsHtml}
     ${changelogHtml}
   `;
   document.getElementById('modal-overlay').classList.add('show');
+  if (section === 'risk') {
+    setTimeout(() => {
+      const el = document.getElementById('kpi-risk-records-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
 }
 
 function renderKPIDetailRelatedTasks(kpi) {
@@ -5455,6 +5573,8 @@ function editData(id) {
   document.getElementById('fm-completed').value = d.completed !== undefined ? d.completed : '';
   document.getElementById('fm-target').value = d.target !== undefined ? d.target : '';
   document.getElementById('fm-progress-display').value = getKPIProgress(d) + '%';
+  document.getElementById('fm-status').value = d.status || '';
+  document.getElementById('fm-trend').value = d.trend || 'flat';
   document.getElementById('fm-deviation').value = d.deviation || '';
   document.getElementById('fm-riskDesc').value = d.riskDesc || '';
   document.getElementById('fm-riskHelp').value = d.riskHelp || '';
@@ -5477,6 +5597,8 @@ function resetForm() {
   ['fm-title','fm-category','fm-weight','fm-unit','fm-provider','fm-lastyear','fm-rule','fm-desc',
    'fm-h1t','fm-h1g','fm-h1c','fm-at','fm-ag','fm-ac',
    'fm-completed','fm-target','fm-progress-display','fm-deviation','fm-riskDesc','fm-riskHelp'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fm-status').value = '';
+  document.getElementById('fm-trend').value = 'flat';
   document.getElementById('fm-type').value = 'kpi';
   document.getElementById('btn-delete').style.display = 'none';
   document.getElementById('btn-cancel').style.display = 'none';
@@ -5521,6 +5643,10 @@ function saveData() {
     base.deviation = document.getElementById('fm-deviation').value.trim();
     base.riskDesc = document.getElementById('fm-riskDesc').value.trim();
     base.riskHelp = document.getElementById('fm-riskHelp').value.trim();
+    const statusVal = document.getElementById('fm-status').value.trim();
+    if (statusVal) base.status = statusVal;
+    else base.status = undefined;
+    base.trend = document.getElementById('fm-trend').value.trim() || 'flat';
     // Derive progress from completed/target when both are provided
     if (base.completed !== undefined && base.target !== undefined) {
       base.progress = getKPIProgress(base);
@@ -5530,10 +5656,26 @@ function saveData() {
   if (editId) {
     const idx = allData.findIndex(d => d.id === editId);
     if (idx >= 0) {
-      const oldTitle = allData[idx].title;
-      allData[idx] = {...allData[idx], ...base};
+      const old = allData[idx];
+      const oldTitle = old.title;
+      allData[idx] = {...old, ...base};
       if (allData[idx].type === 'kpi') {
         logChange(editId, '编辑指标', oldTitle, title);
+        if (base.deviation !== undefined && base.deviation !== (old.deviation || '')) {
+          logChange(editId, '更新偏差记录', old.deviation || '-', base.deviation || '-');
+        }
+        if (base.riskDesc !== undefined && base.riskDesc !== (old.riskDesc || '')) {
+          logChange(editId, '更新风险提示', old.riskDesc || '-', base.riskDesc || '-');
+        }
+        if (base.riskHelp !== undefined && base.riskHelp !== (old.riskHelp || '')) {
+          logChange(editId, '更新风险求助', old.riskHelp || '-', base.riskHelp || '-');
+        }
+        if (base.status !== undefined && base.status !== old.status) {
+          logChange(editId, '修改状态', old.status || 'auto', base.status || 'auto');
+        }
+        if (base.trend !== undefined && base.trend !== (old.trend || 'flat')) {
+          logChange(editId, '更新趋势', old.trend || 'flat', base.trend);
+        }
       }
     }
   } else {
