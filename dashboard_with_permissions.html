@@ -2585,6 +2585,7 @@ function loadDepts() {
 function saveDepts(d) {
   const canonical = [...DEFAULT_DEPTS];
   localStorage.setItem(DEPT_KEY, JSON.stringify(canonical));
+  queueSync();
   // Keep permission L2 map in sync with canonical depts
   if (perms && perms.l2) {
     const newL2 = {};
@@ -2671,6 +2672,7 @@ function loadData(key) {
 function saveDataToStore(data, key) {
   key = key || STORAGE_KEY;
   localStorage.setItem(key, JSON.stringify(data));
+  queueSync();
 }
 
 let allData = loadData();
@@ -2788,6 +2790,7 @@ function loadWeekly(key) {
 function saveWeekly(data, key) {
   key = key || WEEKLY_KEY;
   localStorage.setItem(key, JSON.stringify(data));
+  queueSync();
 }
 
 let weeklyData = loadWeekly();
@@ -2900,6 +2903,7 @@ function loadSubtasks(key) {
 function saveSubtasks(data, key) {
   key = key || SUBTASK_KEY;
   localStorage.setItem(key, JSON.stringify(data));
+  queueSync();
 }
 
 // Extract subtasks from task details when none exist (default data or imported data without subtasks)
@@ -2966,6 +2970,7 @@ function saveDimensionDefs(defs) {
     const parsed = raw ? JSON.parse(raw) : {};
     parsed.defs = defs;
     localStorage.setItem(DIM_STATUS_KEY, JSON.stringify(parsed));
+    queueSync();
   } catch(e) {}
 }
 
@@ -3806,7 +3811,7 @@ const CHANGELOG_KEY = 'perf_dashboard_kpi_changelog';
 function loadChangeLog() {
   try { const r = localStorage.getItem(CHANGELOG_KEY); return r ? JSON.parse(r) : []; } catch(e) { return []; }
 }
-function saveChangeLog(log) { localStorage.setItem(CHANGELOG_KEY, JSON.stringify(log)); }
+function saveChangeLog(log) { localStorage.setItem(CHANGELOG_KEY, JSON.stringify(log)); queueSync(); }
 function logChange(kpiId, action, oldVal, newVal) {
   const log = loadChangeLog();
   const entry = {
@@ -5871,6 +5876,7 @@ function loadPerms() {
 
 function savePerms(perms) {
   localStorage.setItem(PERM_KEY, JSON.stringify(perms));
+  queueSync();
 }
 
 let perms = loadPerms();
@@ -6884,8 +6890,124 @@ function confirmImport() {
   showToast('✅ 成功导入 ' + count + ' 条数据' + (subCount > 0 ? '（含 ' + subCount + ' 个子任务）' : '') + (mode === 'replace' ? '（替换模式）' : '（合并模式）'), 'success');
 }
 
+// ========== 服务端数据同步 ==========
+const SYNC_API    = '/api/state';
+const SYNC_POLL   = 5000;  // 5 秒轮询
+let _syncTimer    = null;
+let _syncPending  = false;
+let _serverVersion = 0;
+let _syncOnline   = false;
+let _syncPollTimer = null;
+
+/** 收集所有 localStorage 数据并发送到服务端 */
+async function syncToServer() {
+  const stores = {};
+  // 收集所有持久化 key
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('perf_dashboard_') && k !== 'perf_dashboard_theme') {
+      try { stores[k] = JSON.parse(localStorage.getItem(k)); } catch(_) { stores[k] = localStorage.getItem(k); }
+    }
+  }
+  try {
+    const res = await fetch(SYNC_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user: (currentUser && currentUser.name) || 'anonymous', stores })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      _serverVersion = data.version;
+      _syncOnline = true;
+      console.log('[Sync] 已同步到服务端 v' + _serverVersion);
+    }
+  } catch(e) {
+    _syncOnline = false;
+    console.warn('[Sync] 服务端不可达:', e.message);
+  }
+  _syncPending = false;
+}
+
+/** 防抖同步：2 秒内多次变更只触发一次 */
+function queueSync() {
+  if (_syncPending) return;
+  _syncPending = true;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => syncToServer(), 2000);
+}
+
+/** 从服务端加载最新数据，写入 localStorage */
+async function loadFromServer() {
+  try {
+    const res = await fetch(SYNC_API, { method: 'GET' });
+    if (!res.ok) return false;
+    const state = await res.json();
+    if (!state.stores || Object.keys(state.stores).length === 0) return false;
+    _serverVersion = state.version;
+    _syncOnline = true;
+    // 写入 localStorage（覆盖本地数据）
+    for (const [k, v] of Object.entries(state.stores)) {
+      localStorage.setItem(k, JSON.stringify(v));
+    }
+    console.log('[Sync] 已从服务端加载 v' + _serverVersion + ' (' + state.lastModifiedBy + ')');
+    return true;
+  } catch(e) {
+    _syncOnline = false;
+    console.warn('[Sync] 无法连接服务端，使用本地数据:', e.message);
+    return false;
+  }
+}
+
+/** 定时轮询：检测服务端版本变化 */
+async function pollServer() {
+  if (_syncPending) return; // 本地有未同步数据时跳过
+  try {
+    const res = await fetch(SYNC_API, { method: 'GET', cache: 'no-cache' });
+    if (!res.ok) { _syncOnline = false; return; }
+    const state = await res.json();
+    _syncOnline = true;
+    if (state.version > _serverVersion && state.stores && Object.keys(state.stores).length > 0) {
+      // 服务端有新数据，写入 localStorage 并刷新
+      for (const [k, v] of Object.entries(state.stores)) {
+        localStorage.setItem(k, JSON.stringify(v));
+      }
+      _serverVersion = state.version;
+      // 重新加载全局变量
+      try {
+        allData = loadData();
+        allDepts = loadDepts();
+        weeklyData = loadWeekly();
+        allSubtasks = loadSubtasks();
+        perms = loadPerms();
+        refreshAllViews();
+      } catch(e) { console.error('[Sync] 刷新视图失败:', e); }
+      console.log('[Sync] 检测到新版本 v' + _serverVersion + ', 已自动刷新');
+    }
+  } catch(e) { _syncOnline = false; }
+}
+
+/** 启动同步轮询 */
+function startSyncPoll() {
+  _syncPollTimer = setInterval(pollServer, SYNC_POLL);
+}
+
 // ========== INIT ==========
-function init() {
+async function init() {
+  // 1. 优先从服务端加载最新数据
+  const fromServer = await loadFromServer();
+
+  // 2. 重新初始化全局变量（loadFromServer 已更新 localStorage）
+  if (fromServer) {
+    try { allData = loadData(); } catch(e) {}
+    try { allDepts = loadDepts(); } catch(e) {}
+    try { weeklyData = loadWeekly(); } catch(e) {}
+    try { allSubtasks = loadSubtasks(); } catch(e) {}
+    try { perms = loadPerms(); } catch(e) {}
+  }
+
+  // 3. 启动同步轮询
+  startSyncPoll();
+
   // Check if user was previously logged in (same session)
   const savedUser = sessionStorage.getItem(SESSION_KEY);
   if (savedUser) {
