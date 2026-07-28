@@ -8,11 +8,11 @@
 (function(){
   function loadScript(src, onload, onerror){
     var s = document.createElement('script');
-    s.src = src; s.async = false;
+    s.src = src; s.async = true;
     s.onload = onload; s.onerror = onerror;
     document.head.appendChild(s);
   }
-  // Try local first, then CDN fallbacks
+  // Try local first, then CDN fallbacks (all non-blocking)
   loadScript('echarts.min.js', function(){},
     function(){
       loadScript('https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js', function(){},
@@ -22,9 +22,6 @@
     });
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
-  onerror="this.onerror=null;this.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'"
-></script>
 <style>
 :root {
   color-scheme: light;
@@ -1869,27 +1866,40 @@ body {
   border-radius:8px; font-size:12px; color:var(--c-text-2); line-height:1.8;
 }
 </style>
-<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
 <script>
+// Beacon SDK — non-blocking lazy load
 (function(){
-  try{
-    var beacon=new BeaconAction({
-      appkey:'0WEB06U85YBSLJNL',
-      versionCode:'1.0.0',
-      channelID:'share',
-      delay:1000,
-      sessionDuration:30*60*1000,
-      isOversea:false,
-      needReportRqdEvent:false
-    });
-    beacon.onDirectUserAction('preview_page_view',{
-      'url':location.href,
-      'referrer':document.referrer,
-      'title':document.title,
-      'sandbox_id':'73d98588b5a04ba184ce64e83b071dfc'
-    });
-  }catch(e){}
+  function initBeacon() {
+    if (typeof BeaconAction === 'undefined') {
+      setTimeout(initBeacon, 200);
+      return;
+    }
+    try{
+      var beacon=new BeaconAction({
+        appkey:'0WEB06U85YBSLJNL',
+        versionCode:'1.0.0',
+        channelID:'share',
+        delay:1000,
+        sessionDuration:30*60*1000,
+        isOversea:false,
+        needReportRqdEvent:false
+      });
+      beacon.onDirectUserAction('preview_page_view',{
+        'url':location.href,
+        'referrer':document.referrer,
+        'title':document.title,
+        'sandbox_id':'73d98588b5a04ba184ce64e83b071dfc'
+      });
+    }catch(e){}
+  }
+  var s = document.createElement('script');
+  s.src = 'https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js';
+  s.async = true;
+  s.onload = initBeacon;
+  s.onerror = function(){}; // silently fail — analytics only
+  document.head.appendChild(s);
 })();
+</script>
 </script></head>
 <body>
 
