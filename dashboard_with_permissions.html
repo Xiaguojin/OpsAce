@@ -8,11 +8,11 @@
 (function(){
   function loadScript(src, onload, onerror){
     var s = document.createElement('script');
-    s.src = src; s.async = true;
+    s.src = src; s.async = false;
     s.onload = onload; s.onerror = onerror;
     document.head.appendChild(s);
   }
-  // Try local first, then CDN fallbacks (all non-blocking)
+  // Try local first, then CDN fallbacks
   loadScript('echarts.min.js', function(){},
     function(){
       loadScript('https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js', function(){},
@@ -22,6 +22,9 @@
     });
 })();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+  onerror="this.onerror=null;this.src='https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'"
+></script>
 <style>
 :root {
   color-scheme: light;
@@ -1866,40 +1869,27 @@ body {
   border-radius:8px; font-size:12px; color:var(--c-text-2); line-height:1.8;
 }
 </style>
+<script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
 <script>
-// Beacon SDK — non-blocking lazy load
 (function(){
-  function initBeacon() {
-    if (typeof BeaconAction === 'undefined') {
-      setTimeout(initBeacon, 200);
-      return;
-    }
-    try{
-      var beacon=new BeaconAction({
-        appkey:'0WEB06U85YBSLJNL',
-        versionCode:'1.0.0',
-        channelID:'share',
-        delay:1000,
-        sessionDuration:30*60*1000,
-        isOversea:false,
-        needReportRqdEvent:false
-      });
-      beacon.onDirectUserAction('preview_page_view',{
-        'url':location.href,
-        'referrer':document.referrer,
-        'title':document.title,
-        'sandbox_id':'73d98588b5a04ba184ce64e83b071dfc'
-      });
-    }catch(e){}
-  }
-  var s = document.createElement('script');
-  s.src = 'https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js';
-  s.async = true;
-  s.onload = initBeacon;
-  s.onerror = function(){}; // silently fail — analytics only
-  document.head.appendChild(s);
+  try{
+    var beacon=new BeaconAction({
+      appkey:'0WEB06U85YBSLJNL',
+      versionCode:'1.0.0',
+      channelID:'share',
+      delay:1000,
+      sessionDuration:30*60*1000,
+      isOversea:false,
+      needReportRqdEvent:false
+    });
+    beacon.onDirectUserAction('preview_page_view',{
+      'url':location.href,
+      'referrer':document.referrer,
+      'title':document.title,
+      'sandbox_id':'73d98588b5a04ba184ce64e83b071dfc'
+    });
+  }catch(e){}
 })();
-</script>
 </script></head>
 <body>
 
@@ -2595,7 +2585,6 @@ function loadDepts() {
 function saveDepts(d) {
   const canonical = [...DEFAULT_DEPTS];
   localStorage.setItem(DEPT_KEY, JSON.stringify(canonical));
-  queueSync();
   // Keep permission L2 map in sync with canonical depts
   if (perms && perms.l2) {
     const newL2 = {};
@@ -2682,7 +2671,6 @@ function loadData(key) {
 function saveDataToStore(data, key) {
   key = key || STORAGE_KEY;
   localStorage.setItem(key, JSON.stringify(data));
-  queueSync();
 }
 
 let allData = loadData();
@@ -2800,7 +2788,6 @@ function loadWeekly(key) {
 function saveWeekly(data, key) {
   key = key || WEEKLY_KEY;
   localStorage.setItem(key, JSON.stringify(data));
-  queueSync();
 }
 
 let weeklyData = loadWeekly();
@@ -2913,7 +2900,6 @@ function loadSubtasks(key) {
 function saveSubtasks(data, key) {
   key = key || SUBTASK_KEY;
   localStorage.setItem(key, JSON.stringify(data));
-  queueSync();
 }
 
 // Extract subtasks from task details when none exist (default data or imported data without subtasks)
@@ -2980,7 +2966,6 @@ function saveDimensionDefs(defs) {
     const parsed = raw ? JSON.parse(raw) : {};
     parsed.defs = defs;
     localStorage.setItem(DIM_STATUS_KEY, JSON.stringify(parsed));
-    queueSync();
   } catch(e) {}
 }
 
@@ -3821,7 +3806,7 @@ const CHANGELOG_KEY = 'perf_dashboard_kpi_changelog';
 function loadChangeLog() {
   try { const r = localStorage.getItem(CHANGELOG_KEY); return r ? JSON.parse(r) : []; } catch(e) { return []; }
 }
-function saveChangeLog(log) { localStorage.setItem(CHANGELOG_KEY, JSON.stringify(log)); queueSync(); }
+function saveChangeLog(log) { localStorage.setItem(CHANGELOG_KEY, JSON.stringify(log)); }
 function logChange(kpiId, action, oldVal, newVal) {
   const log = loadChangeLog();
   const entry = {
@@ -5886,7 +5871,6 @@ function loadPerms() {
 
 function savePerms(perms) {
   localStorage.setItem(PERM_KEY, JSON.stringify(perms));
-  queueSync();
 }
 
 let perms = loadPerms();
@@ -5942,59 +5926,39 @@ function buildCurrentUser(name) {
 }
 
 function handleLogin() {
-  const nameEl = document.getElementById('loginName');
+  const name = document.getElementById('loginName').value.trim();
   const errEl = document.getElementById('loginError');
-
-  if (!nameEl) { console.error('[Login] loginName element not found'); alert('页面加载异常，请刷新重试'); return; }
-  const name = nameEl.value.trim();
-
-  if (errEl) errEl.textContent = '';
-  if (!name) { if (errEl) errEl.textContent = '请输入姓名'; return; }
-
-  console.log('[Login] Attempting login for:', name);
-
-  // Ensure allDepts is valid
-  if (!allDepts || allDepts.length === 0) {
-    allDepts = [...DEFAULT_DEPTS];
-    saveDepts(allDepts);
-  }
-
-  // Ensure perms is valid
-  if (!perms || typeof perms !== 'object' || !Array.isArray(perms.admins) || perms.admins.length === 0) {
-    console.log('[Login] Perms invalid, resetting to defaults');
-    perms = getDefaultPerms();
-  }
+  errEl.textContent = '';
+  if (!name) { errEl.textContent = '请输入姓名'; return; }
 
   try {
     currentUser = buildCurrentUser(name);
   } catch(e) {
-    console.error('[Login] buildCurrentUser error:', e);
+    console.error('buildCurrentUser error:', e);
+    // Safety: if buildCurrentUser throws, rebuild from defaults
     perms = getDefaultPerms();
-    try { savePerms(perms); } catch(e2) {}
-    try { currentUser = buildCurrentUser(name); } catch(e2) {
-      console.error('[Login] Recovery failed:', e2);
-      if (errEl) errEl.textContent = '系统初始化异常，请点击下方"重置权限"后重试';
-      return;
-    }
+    savePerms(perms);
+    currentUser = buildCurrentUser(name);
   }
 
-  console.log('[Login] User built:', JSON.stringify({name: currentUser.name, isAdmin: currentUser.isAdmin, hasL1: currentUser.hasL1, hasL2: currentUser.hasL2, isDeptAdmin: currentUser.isDeptAdmin, dept: currentUser.dept}));
-
-  if (!currentUser || (!currentUser.hasL1 && !currentUser.hasL2 && !currentUser.isDeptAdmin && !currentUser.isAdmin)) {
-    const validUsers = [];
-    if (perms.admins) validUsers.push('管理员：' + perms.admins.join('、'));
-    if (errEl) errEl.textContent = '您没有访问权限。' + (validUsers.length > 0 ? validUsers.join('；') : '请联系管理员添加您的姓名');
+  if (!currentUser.hasL1 && !currentUser.hasL2 && !currentUser.isDeptAdmin) {
+    const hint = (perms.admins && perms.admins.length > 0)
+      ? '管理员：' + perms.admins.join('、')
+      : '请联系管理员添加您的姓名';
+    errEl.textContent = '您没有访问权限，' + hint;
     return;
   }
 
-  try { sessionStorage.setItem(SESSION_KEY, name); } catch(e) {}
+  sessionStorage.setItem(SESSION_KEY, name);
 
-  try { reloadDataForCurrentUser(); } catch(e) { console.error('[Login] reloadDataForCurrentUser error:', e); }
-
-  try { showApp(); } catch(e) {
-    console.error('[Login] showApp error:', e);
-    if (errEl) errEl.textContent = '页面加载失败，请刷新重试';
+  // Reload data for correct department context
+  try {
+    reloadDataForCurrentUser();
+  } catch(e) {
+    console.error('reloadDataForCurrentUser error:', e);
   }
+
+  showApp();
 }
 
 function handleLogout() {
@@ -6920,180 +6884,37 @@ function confirmImport() {
   showToast('✅ 成功导入 ' + count + ' 条数据' + (subCount > 0 ? '（含 ' + subCount + ' 个子任务）' : '') + (mode === 'replace' ? '（替换模式）' : '（合并模式）'), 'success');
 }
 
-// ========== 服务端数据同步 ==========
-const SYNC_API    = '/api/state';
-const SYNC_POLL   = 5000;  // 5 秒轮询
-let _syncTimer    = null;
-let _syncPending  = false;
-let _serverVersion = 0;
-let _syncOnline   = false;
-let _syncPollTimer = null;
-
-/** 收集所有 localStorage 数据并发送到服务端 */
-async function syncToServer() {
-  const stores = {};
-  // 收集所有持久化 key
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith('perf_dashboard_') && k !== 'perf_dashboard_theme') {
-      try { stores[k] = JSON.parse(localStorage.getItem(k)); } catch(_) { stores[k] = localStorage.getItem(k); }
-    }
-  }
-  try {
-    const res = await fetch(SYNC_API, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user: (currentUser && currentUser.name) || 'anonymous', stores })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      _serverVersion = data.version;
-      _syncOnline = true;
-      console.log('[Sync] 已同步到服务端 v' + _serverVersion);
-    }
-  } catch(e) {
-    _syncOnline = false;
-    console.warn('[Sync] 服务端不可达:', e.message);
-  }
-  _syncPending = false;
-}
-
-/** 防抖同步：2 秒内多次变更只触发一次 */
-function queueSync() {
-  if (_syncPending) return;
-  _syncPending = true;
-  clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => syncToServer(), 2000);
-}
-
-/** 从服务端加载最新数据，写入 localStorage */
-async function loadFromServer() {
-  try {
-    const res = await fetch(SYNC_API, { method: 'GET' });
-    if (!res.ok) return false;
-    const state = await res.json();
-    if (!state.stores || Object.keys(state.stores).length === 0) return false;
-    _serverVersion = state.version;
-    _syncOnline = true;
-    // 写入 localStorage（覆盖本地数据）
-    for (const [k, v] of Object.entries(state.stores)) {
-      localStorage.setItem(k, JSON.stringify(v));
-    }
-    console.log('[Sync] 已从服务端加载 v' + _serverVersion + ' (' + state.lastModifiedBy + ')');
-    return true;
-  } catch(e) {
-    _syncOnline = false;
-    console.warn('[Sync] 无法连接服务端，使用本地数据:', e.message);
-    return false;
-  }
-}
-
-/** 定时轮询：检测服务端版本变化 */
-async function pollServer() {
-  if (_syncPending) return; // 本地有未同步数据时跳过
-  try {
-    const res = await fetch(SYNC_API, { method: 'GET', cache: 'no-cache' });
-    if (!res.ok) { _syncOnline = false; return; }
-    const state = await res.json();
-    _syncOnline = true;
-    if (state.version > _serverVersion && state.stores && Object.keys(state.stores).length > 0) {
-      // 服务端有新数据，写入 localStorage 并刷新
-      for (const [k, v] of Object.entries(state.stores)) {
-        localStorage.setItem(k, JSON.stringify(v));
-      }
-      _serverVersion = state.version;
-      // 重新加载全局变量
-      try {
-        allData = loadData();
-        allDepts = loadDepts();
-        weeklyData = loadWeekly();
-        allSubtasks = loadSubtasks();
-        perms = loadPerms();
-        refreshAllViews();
-      } catch(e) { console.error('[Sync] 刷新视图失败:', e); }
-      console.log('[Sync] 检测到新版本 v' + _serverVersion + ', 已自动刷新');
-    }
-  } catch(e) { _syncOnline = false; }
-}
-
-/** 启动同步轮询 */
-function startSyncPoll() {
-  _syncPollTimer = setInterval(pollServer, SYNC_POLL);
-}
-
 // ========== INIT ==========
-async function init() {
-  console.log('[Init] Starting...');
-
-  // 1. 优先从服务端加载最新数据
-  let fromServer = false;
-  try {
-    fromServer = await loadFromServer();
-  } catch(e) {
-    console.warn('[Init] Server loading failed:', e.message);
-  }
-
-  // 2. 重新初始化全局变量
-  if (fromServer) {
-    try { allData = loadData(); } catch(e) { console.error('[Init] loadData:', e); }
-    try { allDepts = loadDepts(); } catch(e) { console.error('[Init] loadDepts:', e); }
-    try { weeklyData = loadWeekly(); } catch(e) { console.error('[Init] loadWeekly:', e); }
-    try { allSubtasks = loadSubtasks(); } catch(e) { console.error('[Init] loadSubtasks:', e); }
-    try { perms = loadPerms(); } catch(e) { console.error('[Init] loadPerms:', e); }
-  }
-
-  // 3. 安全兜底：确保 perms 有效并持久化到 localStorage
-  if (!perms || typeof perms !== 'object' || !Array.isArray(perms.admins) || perms.admins.length === 0) {
-    console.log('[Init] Perms invalid, using defaults');
-    perms = getDefaultPerms();
-    try { savePerms(perms); } catch(e) { console.error('[Init] savePerms error:', e); }
-  }
-  console.log('[Init] Perms loaded, admins:', perms.admins);
-
-  // 确保关键数据已初始化（静态托管环境无服务端时 fromServer=false，需强制加载）
-  if (!fromServer) {
-    try { allData = loadData(); } catch(e) { allData = []; }
-    try { allDepts = loadDepts(); } catch(e) { allDepts = [...DEFAULT_DEPTS]; }
-    try { weeklyData = loadWeekly(); } catch(e) { weeklyData = {}; }
-    try { allSubtasks = loadSubtasks(); } catch(e) { allSubtasks = {}; }
-    console.log('[Init] Local data loaded: data=' + allData.length + ', depts=' + allDepts.length);
-  }
-
-  // 4. 启动同步轮询（静默失败不影响登录）
-  try { startSyncPoll(); } catch(e) { console.warn('[Init] syncPoll skipped:', e.message); }
-
+function init() {
   // Check if user was previously logged in (same session)
   const savedUser = sessionStorage.getItem(SESSION_KEY);
   if (savedUser) {
     try {
       currentUser = buildCurrentUser(savedUser);
     } catch(e) {
-      console.error('[Init] buildCurrentUser error:', e);
+      console.error('init buildCurrentUser error:', e);
       perms = getDefaultPerms();
       savePerms(perms);
-      try { currentUser = buildCurrentUser(savedUser); } catch(e2) {}
+      currentUser = buildCurrentUser(savedUser);
     }
-    if (currentUser && (currentUser.hasL1 || currentUser.hasL2 || currentUser.isDeptAdmin || currentUser.isAdmin)) {
-      try { reloadDataForCurrentUser(); } catch(e) { console.error('[Init] reloadData:', e); }
-      try { showApp(); } catch(e) { console.error('[Init] showApp:', e); }
+    if (currentUser.hasL1 || currentUser.hasL2 || currentUser.isDeptAdmin || currentUser.isAdmin) {
+      try { reloadDataForCurrentUser(); } catch(e) { console.error('init reloadData error:', e); }
+      try { showApp(); } catch(e) { console.error('init showApp error:', e); }
       return;
     }
   }
 
   // Show login screen
-  try {
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) overlay.classList.remove('hidden');
-    const nameInput = document.getElementById('loginName');
-    if (nameInput) nameInput.focus();
-  } catch(e) { console.error('[Init] login screen:', e); }
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginName').focus();
 
-  // Pre-render data in background
-  try { renderCockpitCards(); } catch(e) { console.error('[Init] renderCockpitCards:', e); }
-  try { renderRankingTable(); } catch(e) { console.error('[Init] renderRankingTable:', e); }
-  try { renderKPITable(); } catch(e) { console.error('[Init] renderKPITable:', e); }
-  try { renderTasks(); } catch(e) { console.error('[Init] renderTasks:', e); }
-  try { renderBonus(); } catch(e) { console.error('[Init] renderBonus:', e); }
+  // Pre-render data in background (charts will init after login)
+  // Each render wrapped individually so one failure doesn't block others
+  try { renderCockpitCards(); } catch(e) { console.error('renderCockpitCards:', e); }
+  try { renderRankingTable(); } catch(e) { console.error('renderRankingTable:', e); }
+  try { renderKPITable(); } catch(e) { console.error('renderKPITable:', e); }
+  try { renderTasks(); } catch(e) { console.error('renderTasks:', e); }
+  try { renderBonus(); } catch(e) { console.error('renderBonus:', e); }
 }
 
 init();
