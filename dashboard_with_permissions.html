@@ -1943,6 +1943,37 @@ body {
   resize: none; outline: none;
 }
 
+/* 风险选择器颜色 */
+.tdp-subtable .st-risk-select {
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7590' d='M0 0h10L5 6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 18px;
+  min-width: 54px;
+}
+.st-risk-select.risk-high { background-color: rgba(239,68,68,0.15); color: #ef4444; border-color: #ef4444; }
+.st-risk-select.risk-mid  { background-color: rgba(245,158,11,0.15); color: #f59e0b; border-color: #f59e0b; }
+.st-risk-select.risk-low { background-color: rgba(34,197,94,0.12); color: #22c55e; border-color: #22c55e; }
+
+/* 季度选择器颜色 */
+.st-quarter-select { padding: 4px 6px; border-radius: 6px; border: 1px solid var(--c-border); background: var(--c-surface); color: var(--c-text); font-size: 12px; font-weight: 600; cursor: pointer; outline: none; text-align: center; min-width: 50px; }
+.st-quarter-select.quarter-Q1 { background: #dcfce7; color: #166534; border-color: #86efac; }
+.st-quarter-select.quarter-Q2 { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.st-quarter-select.quarter-Q3 { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
+.st-quarter-select.quarter-Q4 { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+
+
 
 </style>
 <script src="https://beacon.cdn.qq.com/sdk/4.5.9/beacon_web.min.js"></script>
