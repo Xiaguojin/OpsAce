@@ -1973,6 +1973,134 @@ body {
 .st-quarter-select.quarter-Q3 { background: #fff7ed; color: #9a3412; border-color: #fdba74; }
 .st-quarter-select.quarter-Q4 { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
 
+/* 子任务表格 — 横向滚动条 */
+.tdp-subtable-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: var(--c-surface);
+  -webkit-overflow-scrolling: touch;
+}
+.tdp-subtable-wrap::-webkit-scrollbar { height: 10px; }
+.tdp-subtable-wrap::-webkit-scrollbar-track { background: var(--c-surface-2); border-radius: 5px; }
+.tdp-subtable-wrap::-webkit-scrollbar-thumb { background: #5a6478; border-radius: 5px; }
+.tdp-subtable-wrap::-webkit-scrollbar-thumb:hover { background: #7a8498; }
+.tdp-subtable { min-width: 1900px; border-collapse: collapse; }
+
+/* 子任务 — 进度可拖动滑块 */
+.st-progress-wrapper {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; min-width: 160px;
+}
+.st-progress-bar {
+  position: relative;
+  flex: 1; height: 14px;
+  background: var(--c-surface-2);
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--c-border);
+  overflow: visible;
+}
+.st-progress-fill {
+  position: absolute; top: 0; left: 0; height: 100%;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: width 0.2s, background 0.2s;
+}
+.st-progress-handle {
+  position: absolute; top: 50%;
+  width: 16px; height: 16px;
+  background: #fff;
+  border: 2px solid var(--c-primary);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  pointer-events: auto;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.st-progress-handle:hover {
+  transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 2px 8px rgba(67,97,238,0.4);
+}
+.st-progress-handle:active { cursor: grabbing; }
+.st-pct-display {
+  font-size: 12px; font-weight: 700;
+  min-width: 38px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 状态字段颜色（已完成=绿、进行中=蓝、未开始=灰、delay=红）*/
+.st-status-wrap {
+  display: inline-block;
+}
+.st-status-select {
+  padding: 4px 22px 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7590' d='M0 0h10L5 6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  min-width: 78px;
+}
+.st-status-select.completed { background-color: rgba(34,197,94,0.18); color: #16a34a; border-color: #22c55e; }
+.st-status-select.in_progress { background-color: rgba(59,130,246,0.18); color: #2563eb; border-color: #3b82f6; }
+.st-status-select.not_started { background-color: rgba(156,163,175,0.18); color: #6b7280; border-color: #9ca3af; }
+.st-status-select.delayed { background-color: rgba(239,68,68,0.18); color: #dc2626; border-color: #ef4444; }
+
+/* 工作进展 — 可输入文字和图片的文本框 */
+.st-note-cell {
+  min-width: 140px;
+  max-width: 240px;
+}
+.st-note-preview {
+  font-size: 12px; color: var(--c-text-2);
+  padding: 6px 8px; min-height: 30px;
+  border: 1px solid var(--c-border); border-radius: 6px;
+  background: var(--c-surface);
+  cursor: text;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.st-note-preview:hover { border-color: var(--c-primary); }
+.st-note-preview.empty { color: var(--c-text-3); font-style: italic; background: rgba(67,97,238,0.04); }
+.empty-note { color: var(--c-text-3); font-style: italic; }
+.st-note-input {
+  display: none;
+  width: 100%;
+  min-height: 60px; max-height: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--c-primary); border-radius: 6px;
+  background: var(--c-surface); color: var(--c-text);
+  font-size: 12px; font-family: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(67,97,238,0.15);
+  overflow-y: auto;
+  line-height: 1.5;
+}
+.st-note-input img { max-width: 100%; max-height: 120px; border-radius: 4px; margin: 2px 0; display: block; }
+
+/* contenteditable 空状态 placeholder */
+.st-note-input:empty::before {
+  content: attr(data-placeholder);
+  color: var(--c-text-3);
+  font-style: italic;
+}
+
+/* 季度单元格 */
+.st-quarter-cell { text-align: center; }
+
 
 
 </style>
@@ -4630,8 +4758,6 @@ function renderTaskDetail(taskId) {
           ${subs.map((s, idx) => {
             const sBarColor = s.progress >= 100 ? 'var(--c-green)' : s.progress >= 50 ? 'var(--c-orange)' : 'var(--c-red)';
             const noteText = s.note || '';
-            const noteHasImg = /<img\b/i.test(noteText);
-            const notePreviewHtml = noteText ? (noteHasImg ? '<span>📷 图片+文本</span>' : escapeHtml(truncate(stripHtml(noteText), 18))) : '<span class="empty-note">点击填写进展</span>';
             const dueVal = s.dueDate || s.due || '';
             const changeVal = s.change || '初始设定';
             const changeClass = {'初始设定':'change-init','H2新增':'change-add','H2变更':'change-mod','H2删除':'change-del'}[changeVal] || 'change-init';
@@ -4639,11 +4765,11 @@ function renderTaskDetail(taskId) {
               <tr data-sub-idx="${idx}">
                 <td class="st-name" style="cursor:pointer;color:var(--c-primary);" onclick="openSubtaskDetail('${t.id}', ${idx}, 'task')" title="点击查看详情和历史">${escapeHtml(s.name)} 🔍</td>
                 <td class="st-note-cell">
-                  <div class="st-note-preview ${noteText ? '' : 'empty'}" title="${escapeHtml(stripHtml(noteText))}" onclick="showNoteEditor(this)">${notePreviewHtml}</div>
-                  <div class="st-note-input" contenteditable="true" style="display:none;" 
+                  <div class="st-note-input" contenteditable="true"
                     onblur="saveNoteEditor(this, '${t.id}', ${idx}, 'task')"
                     onpaste="handleNotePaste(event, this)"
-                    data-original="${escapeHtml(noteText)}">${noteText}</div>
+                    data-placeholder="点击填写进展（可粘贴图片）..."
+                    style="display:block;">${noteText}</div>
                 </td>
                 <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal || '')}" placeholder="任务目标" onchange="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'task')" onblur="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'task')"></td>
                 <td><input type="text" class="st-kr-input" value="${escapeHtml(s.kr || '')}" placeholder="关键成果" onchange="updateSubtaskField('${t.id}', ${idx}, 'kr', this.value, 'task')" onblur="updateSubtaskField('${t.id}', ${idx}, 'kr', this.value, 'task')"></td>
@@ -6063,8 +6189,6 @@ function renderL2TaskDetail(taskId) {
           ${subs.map((s, idx) => {
             const sBarColor = s.progress >= 100 ? 'var(--c-green)' : s.progress >= 50 ? 'var(--c-orange)' : 'var(--c-red)';
             const noteText = s.note || '';
-            const noteHasImg = /<img\b/i.test(noteText);
-            const notePreviewHtml = noteText ? (noteHasImg ? '<span>📷 图片+文本</span>' : escapeHtml(truncate(stripHtml(noteText), 18))) : '<span class="empty-note">点击填写进展</span>';
             const dueVal = s.dueDate || s.due || '';
             const changeVal = s.change || '初始设定';
             const changeClass = {'初始设定':'change-init','H2新增':'change-add','H2变更':'change-mod','H2删除':'change-del'}[changeVal] || 'change-init';
@@ -6072,11 +6196,11 @@ function renderL2TaskDetail(taskId) {
               <tr data-sub-idx="${idx}">
                 <td class="st-name" style="cursor:pointer;color:var(--c-primary);" onclick="openSubtaskDetail('${t.id}', ${idx}, 'task')" title="点击查看详情和历史">${escapeHtml(s.name)} 🔍</td>
                 <td class="st-note-cell">
-                  <div class="st-note-preview ${noteText ? '' : 'empty'}" title="${escapeHtml(stripHtml(noteText))}" onclick="showNoteEditor(this)">${notePreviewHtml}</div>
-                  <div class="st-note-input" contenteditable="true" style="display:none;" 
+                  <div class="st-note-input" contenteditable="true"
                     onblur="saveNoteEditor(this, '${t.id}', ${idx}, 'l2')"
                     onpaste="handleNotePaste(event, this)"
-                    data-original="${escapeHtml(noteText)}">${noteText}</div>
+                    data-placeholder="点击填写进展（可粘贴图片）..."
+                    style="display:block;">${noteText}</div>
                 </td>
                 <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal || '')}" placeholder="任务目标" onchange="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'l2')" onblur="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'l2')"></td>
                 <td><input type="text" class="st-kr-input" value="${escapeHtml(s.kr || '')}" placeholder="关键成果" onchange="updateSubtaskField('${t.id}', ${idx}, 'kr', this.value, 'l2')" onblur="updateSubtaskField('${t.id}', ${idx}, 'kr', this.value, 'l2')"></td>
