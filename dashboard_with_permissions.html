@@ -2101,6 +2101,29 @@ body {
 /* 季度单元格 */
 .st-quarter-cell { text-align: center; }
 
+/* 重点工作完成率卡片 - 状态/风险分布 */
+.cockpit-distribution-section { margin-top: 10px; }
+.cdist-title {
+  font-size: 12px; color: var(--c-text-2); margin-bottom: 6px;
+  font-weight: 600;
+}
+.cdist-sub { color: var(--c-text-3); font-weight: 400; font-size: 11px; }
+.cdist-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.cdist-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: 600;
+  border: 1px solid transparent;
+}
+.cdist-pill b { font-weight: 700; }
+.cdist-pill.s-completed   { background: rgba(34,197,94,0.18);  color: #16a34a; border-color: #22c55e; }
+.cdist-pill.s-in_progress { background: rgba(59,130,246,0.18); color: #2563eb; border-color: #3b82f6; }
+.cdist-pill.s-not_started { background: rgba(156,163,175,0.18); color: #6b7280; border-color: #9ca3af; }
+.cdist-pill.s-delayed     { background: rgba(239,68,68,0.18);  color: #dc2626; border-color: #ef4444; }
+.cdist-pill.r-high { background: rgba(239,68,68,0.18);  color: #dc2626; border-color: #ef4444; }
+.cdist-pill.r-mid  { background: rgba(245,158,11,0.18); color: #d97706; border-color: #f59e0b; }
+.cdist-pill.r-low  { background: rgba(34,197,94,0.15);  color: #16a34a; border-color: #22c55e; }
+
 
 
 </style>
@@ -3856,6 +3879,67 @@ function renderCockpitCards() {
   const filters = getActiveFilters();
   const badgeEl = document.getElementById('overview-year-badge');
   if (badgeEl && filters.year) badgeEl.textContent = filters.year + '年度';
+
+  // 重点工作 - 状态分布 & 风险分布（不含已完成）
+  renderCockpitTaskDistribution();
+}
+
+function renderCockpitTaskDistribution() {
+  const statusEl = document.getElementById('cockpit-task-status-dist');
+  const riskEl = document.getElementById('cockpit-task-risk-dist');
+  if (!statusEl || !riskEl) return;
+
+  // 收集所有筛选范围内的子任务
+  const subtasksMap = getFilteredSubtasks();
+  const allSubs = [];
+  Object.keys(subtasksMap).forEach(tid => {
+    (subtasksMap[tid] || []).forEach(s => allSubs.push(s));
+  });
+
+  if (allSubs.length === 0) {
+    statusEl.innerHTML = '';
+    riskEl.innerHTML = '';
+    return;
+  }
+
+  // 状态分布
+  const statMap = { completed: 0, in_progress: 0, not_started: 0, delayed: 0 };
+  allSubs.forEach(s => {
+    const st = s.status || (s.progress >= 100 ? 'completed' : s.progress > 0 ? 'in_progress' : 'not_started');
+    if (statMap[st] !== undefined) statMap[st]++;
+  });
+  const statusDefs = [
+    { key: 'completed',   label: '已完成',  cls: 's-completed' },
+    { key: 'in_progress', label: '进行中',  cls: 's-in_progress' },
+    { key: 'not_started', label: '未开始',  cls: 's-not_started' },
+    { key: 'delayed',     label: 'delay',   cls: 's-delayed' }
+  ];
+  statusEl.innerHTML = `
+    <div class="cdist-title">状态分布</div>
+    <div class="cdist-pills">
+      ${statusDefs.map(d => `<span class="cdist-pill ${d.cls}">${d.label} <b>${statMap[d.key]}</b></span>`).join('')}
+    </div>
+  `;
+
+  // 风险分布（不含已完成）
+  const riskMap = { high: 0, mid: 0, low: 0 };
+  allSubs.forEach(s => {
+    if ((s.progress || 0) >= 100) return;  // 已完成的不计
+    const r = s.risk;
+    const level = (r === 'P0' || r === 'P1') ? 'high' : (r === 'P2' ? 'mid' : 'low');
+    if (riskMap[level] !== undefined) riskMap[level]++;
+  });
+  const riskDefs = [
+    { key: 'high', label: '高风险', cls: 'r-high' },
+    { key: 'mid',  label: '中风险', cls: 'r-mid' },
+    { key: 'low',  label: '低风险', cls: 'r-low' }
+  ];
+  riskEl.innerHTML = `
+    <div class="cdist-title">风险分布 <span class="cdist-sub">（不含已完成）</span></div>
+    <div class="cdist-pills">
+      ${riskDefs.map(d => `<span class="cdist-pill ${d.cls}">${d.label} <b>${riskMap[d.key]}</b></span>`).join('')}
+    </div>
+  `;
 }
 
 function renderRankingTable(filter) {
@@ -4768,7 +4852,7 @@ function renderTaskDetail(taskId) {
                   <div class="st-note-input" contenteditable="true"
                     onblur="saveNoteEditor(this, '${t.id}', ${idx}, 'task')"
                     onpaste="handleNotePaste(event, this)"
-                    data-placeholder="点击填写进展（可粘贴图片）..."
+                    data-placeholder="点击填写进展..."
                     style="display:block;">${noteText}</div>
                 </td>
                 <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal || '')}" placeholder="任务目标" onchange="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'task')" onblur="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'task')"></td>
@@ -6199,7 +6283,7 @@ function renderL2TaskDetail(taskId) {
                   <div class="st-note-input" contenteditable="true"
                     onblur="saveNoteEditor(this, '${t.id}', ${idx}, 'l2')"
                     onpaste="handleNotePaste(event, this)"
-                    data-placeholder="点击填写进展（可粘贴图片）..."
+                    data-placeholder="点击填写进展..."
                     style="display:block;">${noteText}</div>
                 </td>
                 <td><input type="text" class="st-goal-input" value="${escapeHtml(s.goal || '')}" placeholder="任务目标" onchange="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'l2')" onblur="updateSubtaskField('${t.id}', ${idx}, 'goal', this.value, 'l2')"></td>
